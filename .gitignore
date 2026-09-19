@@ -3,3 +3,14 @@ __pycache__/
 *.py[cod]
 portfolio.json
 .DS_Store
+
+.pytest_cache/
+
+# Local runtime data and machine-specific files
+crypto_data.db
+crypto_data.db-journal
+crypto_data.db-wal
+crypto_data.db-shm
+alerts.log
+main.py.bak_pre_fixes
+.claude/settings.local.json
