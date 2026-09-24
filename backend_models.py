@@ -100,6 +100,20 @@ class Evidence(Contract):
     limitations: list[str]
 
 
+class HistoryPoint(Contract):
+    date: str
+    price: FiniteFloat
+    ma_7: FiniteFloat | None
+    ma_25: FiniteFloat | None
+    bollinger_lower: FiniteFloat | None
+    bollinger_middle: FiniteFloat | None
+    bollinger_upper: FiniteFloat | None
+
+
+class AnalysisResponse(Evidence):
+    history: list[HistoryPoint] = Field(default_factory=list)
+
+
 class Citation(Contract):
     explanation: Annotated[str, Field(min_length=1, max_length=1200)]
     evidence_keys: Annotated[list[str], Field(min_length=1, max_length=12)]

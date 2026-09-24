@@ -12,13 +12,15 @@ class Element {
  append(...nodes) { this.children.push(...nodes); }
  replaceChildren(...nodes) { this.text='';this.children=nodes; }
  addEventListener(type, fn) { this.listeners[type]=fn; }
+ setAttribute(key, value) { this[key]=value; }
  reportValidity() { return true; }
 }
 function setup() {
  const elements=Object.fromEntries(['coin','days','include-position','amount','cost','status','analysis','ai','analysis-form','recommend'].map(id=>[id,new Element()]));
  elements.coin.value='bitcoin'; elements.days.value='90'; elements.amount.value='0'; elements.cost.value='0';
  const requests=[];
- const context={Intl, document:{getElementById:id=>elements[id],createElement:tag=>new Element(tag),createDocumentFragment:()=>new Element('fragment')},fetch:(url, options)=>new Promise((resolve,reject)=>requests.push({url,options,resolve,reject}))};
+ const context={Intl, document:{getElementById:id=>elements[id],createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag),createDocumentFragment:()=>new Element('fragment')},fetch:(url, options)=>new Promise((resolve,reject)=>requests.push({url,options,resolve,reject}))};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../static/assets/visuals.js'), 'utf8'),context);
  vm.runInNewContext(source,context);
  const click=()=>elements.recommend.listeners.click();
  const analyze=()=>elements['analysis-form'].listeners.submit({preventDefault(){}});
@@ -42,3 +44,8 @@ test('safe AI error is rendered literally while evidence remains available',asyn
 for (const message of ['Failed to fetch','NetworkError when attempting to fetch resource.','Load failed']) {
  test('connection failure normalized: '+message,async()=>{const s=setup();const p=s.click();s.requests[0].reject(new TypeError(message));await p;assert.match(s.elements.ai.textContent,/Could not connect to the local server/);assert.equal(s.elements.recommend.disabled,false);assert.equal(s.requests.length,1);});
 }
+
+function descendants(n) { return [n,...n.children.flatMap(descendants)]; }
+function chartPoints() { return ['2026-09-01','2026-09-02','2026-09-04'].map((date,i)=>({date,price:100,ma_7:i?100:null,ma_25:null,bollinger_lower:null,bollinger_middle:null,bollinger_upper:null})); }
+test('chart preserves gaps, handles flat values, and offers keyboard inspection',async()=>{const s=setup();const p=s.analyze();s.answer(0,{...evidence(100),history:chartPoints()});await p;const nodes=descendants(s.elements.analysis);const paths=nodes.filter(n=>n.tag==='path');assert.equal((paths[0].d.match(/M/g)||[]).length,2);assert.doesNotMatch(paths[0].d,/NaN|Infinity/);const slider=nodes.find(n=>n.type==='range');slider.value='0';slider.listeners.input();assert.match(s.elements.analysis.textContent,/2026-09-01 UTC/);assert.match(s.elements.analysis.textContent,/Chart data table/);const bands=nodes.filter(n=>n.type==='checkbox')[1];bands.checked=true;bands.listeners.change();assert.equal(descendants(s.elements.analysis).filter(n=>n.tag==='path').length,6);});
+test('plain language is descriptive and warns about no completed trades',async()=>{const s=setup();const p=s.analyze();s.answer(0,{...evidence(),indicators:{latest_history_price_usd:189,ma_25:180,rsi_14:70,macd_histogram:-1}});await p;assert.match(s.elements.analysis.textContent,/above its 25-observation average/);assert.match(s.elements.analysis.textContent,/does not predict a reversal/);assert.match(s.elements.analysis.textContent,/cannot estimate a win rate/);assert.match(s.elements.analysis.textContent,/Technical details and limitations/);});

@@ -253,3 +253,9 @@ Both evidence endpoints currently show historical prices; live price is N/A. Eac
 Host must match the configured local authority. If Origin is present it must match too; non-browser clients without Origin remain supported. The default is `http://127.0.0.1:8000`. For a different port, set `CRYPTO_ORIGIN` (for example `$env:CRYPTO_ORIGIN = "http://127.0.0.1:9000"`) and launch Uvicorn on that same port. Only explicit loopback HTTP origins are accepted; localhost is supported only when explicitly configured. Tests use the matching TestClient base URL. These checks are not authentication: keep this a local single-user service, with one worker.
 
 Dashboard interaction regressions (Node.js 22 or newer, no npm dependencies): `node tests/dashboard.test.cjs`. These run the actual browser script with a minimal DOM and mocked fetch responses; they supplement manual browser checks.
+
+### Visual analysis
+
+Analyze market now requests `include_history=true` on the existing analysis endpoint. The response includes chronological UTC daily price, MA7, MA25 and Bollinger (20 observations, sample standard deviation, plus/minus two standard deviations) series from the same validated historical frame used for the evidence. Warm-up values are null; missing dates are not filled. Without that query option history is empty. Recommendation evidence and OpenAI payloads do not include chart history.
+
+The dashboard shows descriptive summaries first, then a local SVG chart with optional averages/bands, a keyboard-accessible observation slider and a data table. Exact indicators, backtest results, coverage and limitations remain under Technical details and limitations. Chart scaling follows the displayed series rather than forcing a zero baseline. Summary thresholds are descriptive conventions, not trade recommendations. Restart the backend after updating Python code, then refresh the browser.

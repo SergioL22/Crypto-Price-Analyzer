@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 import analysis
 import api
-from backend_models import Evidence, Market, PricesResponse, BacktestResponse
+from backend_models import Evidence, AnalysisResponse, Market, PricesResponse, BacktestResponse
 from history_window import select_daily_window
 from llm import OpenAIRecommender
 from price_validation import validate_prices
@@ -80,13 +80,23 @@ class BackendService:
         except (ValidationError, ValueError, TypeError):
             raise BackendError(502, 'invalid_market_data', 'CoinGecko returned invalid prices.') from None
 
-    def evidence(self, coin_id, days, position=None):
+    def evidence(self, coin_id, days, position=None, *, include_history=False):
         current = self.now()
         frame, _ = self._fresh(coin_id, days, 35, current)
         portfolio = None if position is None else {coin_id: position}
         try:
             evidence = build_evidence(coin_id, frame, days=days, portfolio=portfolio, now=current)
             Evidence.model_validate(evidence)
+            if include_history:
+                prices = frame['price']
+                mid, upper, lower = analysis.compute_bollinger_bands(prices)
+                series = dict(price=prices, ma_7=prices.rolling(7).mean(),
+                              ma_25=prices.rolling(25).mean(), bollinger_lower=lower,
+                              bollinger_middle=mid, bollinger_upper=upper)
+                evidence['history'] = [dict(date=pd.Timestamp(date).date().isoformat(),
+                    **{key: None if pd.isna(values.iloc[index]) else float(values.iloc[index])
+                       for key, values in series.items()}) for index, date in enumerate(frame.index)]
+                AnalysisResponse.model_validate(evidence)
             return evidence
         except (RecommendationError, ValidationError, ValueError, TypeError, OverflowError):
             raise BackendError(502, 'invalid_market_data', 'History could not produce valid evidence.') from None

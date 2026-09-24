@@ -22,6 +22,9 @@ function validEvidence(e) {
 function evidence(parent, e) {
  if (!validEvidence(e)) throw new Error("Invalid response");
  parent.append(el("p", `${e.coin_id} · snapshot ${e.generated_at_utc}`));
+ visualSummary(parent, e);
+ if (e.history) priceChart(parent, e.history);
+ const technical = el("details"); technical.append(el("summary", "Technical details and limitations")); parent.append(technical); parent = technical;
  coverage(parent, e.window);
  parent.append(el("h3", "Indicators"));
  const i = e.indicators;
@@ -67,7 +70,7 @@ function invalidate() {
 $("analysis-form").addEventListener("submit", async event => {
  event.preventDefault(); const body = selection(false); if (!body) return;
  const seq = ++analysisSequence, rev = revision; const panel = $("analysis"); reset(panel, "Market analysis"); status("Loading market evidence…");
- try { const result = await request(`/v1/analysis/${encodeURIComponent(body.coin_id)}?days=${body.days}`); if (seq !== analysisSequence || rev !== revision) return; const fragment = document.createDocumentFragment(); evidence(fragment, result); panel.append(fragment); status("Analysis ready."); }
+ try { const result = await request(`/v1/analysis/${encodeURIComponent(body.coin_id)}?days=${body.days}&include_history=true`); if (seq !== analysisSequence || rev !== revision) return; const fragment = document.createDocumentFragment(); evidence(fragment, result); panel.append(fragment); status("Analysis ready."); }
  catch (error) { if (seq === analysisSequence && rev === revision) { showError(panel, error); status("Analysis unavailable."); } }
 });
 $("recommend").addEventListener("click", async () => {

@@ -330,3 +330,34 @@ def test_nonnegative_and_unknown_market_values_preserved(setup, value):
     market = response.json()['markets'][0]
     assert all(market[field] == value for field in fields)
     assert all(market[field] == -5.5 for field in changes)
+
+
+def test_chart_matches_evidence_without_second_fetch(setup):
+    client, _, provider, calls = setup
+    body = client.get('/v1/analysis/bitcoin?days=90&include_history=true').json()
+    points = body['history']
+    assert len(points) == body['window']['observations'] == 90
+    assert calls == [('bitcoin', 90)]
+    assert provider.calls == []
+    assert points[0]['date'] == body['window']['start']
+    assert points[-1]['date'] == body['window']['end']
+    assert points[-1]['price'] == body['indicators']['latest_history_price_usd']
+    for key in ('ma_7', 'ma_25', 'bollinger_lower', 'bollinger_middle', 'bollinger_upper'):
+        assert points[-1][key] == pytest.approx(body['indicators'][key])
+    assert all(p['ma_7'] is None for p in points[:6])
+    assert points[6]['ma_7'] == 103
+    assert all(p['bollinger_middle'] is None for p in points[:19])
+    json.dumps(body, allow_nan=False)
+
+
+def test_chart_preserves_gaps_and_recommendation_payload_stays_small(setup):
+    client, service, provider, _ = setup
+    raw = history().drop(history().index[40])
+    service.history_fetcher = lambda *a, **k: raw
+    body = client.get('/v1/analysis/bitcoin?days=90&include_history=true').json()
+    assert len(body['history']) == 89
+    assert body['window']['missing_days'] == 1
+    assert history().index[40].date().isoformat() not in [p['date'] for p in body['history']]
+    result = client.post('/v1/recommendations', json={'coin_id':'bitcoin'}).json()
+    assert 'history' not in result['evidence']
+    assert 'history' not in provider.calls[0]

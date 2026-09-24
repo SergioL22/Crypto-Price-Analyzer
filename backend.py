@@ -8,7 +8,7 @@ from fastapi import FastAPI, Path, Query
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from backend_models import (BacktestRequest, RecommendationRequest, Evidence, BacktestResponse,
+from backend_models import (BacktestRequest, RecommendationRequest, Evidence, AnalysisResponse, BacktestResponse,
                             RecommendationResponse, PricesResponse, HealthResponse, ErrorResponse)
 from backend_service import BackendError, BackendService
 
@@ -72,10 +72,10 @@ def create_app(service=None, *, allowed_origin=None):
     def prices():
         return service.prices()
 
-    @app.get('/v1/analysis/{coin_id}', response_model=Evidence, responses=errors)
+    @app.get('/v1/analysis/{coin_id}', response_model=AnalysisResponse, responses=errors)
     def evidence(coin_id: Annotated[str, Path(min_length=1, max_length=100, pattern=r'^[a-z0-9]+(?:-[a-z0-9]+)*$')],
-                 days: Annotated[int, Query(ge=35, le=365)] = 90):
-        return service.evidence(coin_id, days)
+                 days: Annotated[int, Query(ge=35, le=365)] = 90, include_history: bool = False):
+        return service.evidence(coin_id, days, include_history=include_history)
 
     @app.post('/v1/backtests', response_model=BacktestResponse, responses=errors)
     def backtest(body: BacktestRequest):
