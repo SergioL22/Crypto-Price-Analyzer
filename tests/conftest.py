@@ -11,3 +11,4 @@ def block_live_provider_requests(monkeypatch):
     monkeypatch.setattr(requests.sessions.Session, 'request', blocked)
     monkeypatch.delenv('OPENAI_API_KEY', raising=False)
     monkeypatch.delenv('OPENAI_MODEL', raising=False)
+    monkeypatch.delenv('CRYPTO_ORIGIN', raising=False)

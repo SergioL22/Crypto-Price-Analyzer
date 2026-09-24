@@ -56,7 +56,7 @@ def setup(monkeypatch):
         monkeypatch.setattr(data,name,forbidden)
     service=BackendService(history_fetcher=fetch,prices_fetcher=lambda:[{'id':'bitcoin', 'current_price':None}],
                            recommender_factory=lambda:provider,now=lambda:NOW)
-    with TestClient(create_app(service)) as client:
+    with TestClient(create_app(service), base_url="http://127.0.0.1:8000") as client:
         yield client,service,provider,calls
 
 
@@ -240,7 +240,7 @@ def test_health_remains_responsive_and_other_work_is_rejected():
         assert release.wait(5)
         return history()
     service=BackendService(history_fetcher=fetch,now=lambda:NOW,market_capacity=1)
-    with TestClient(create_app(service)) as client, ThreadPoolExecutor(max_workers=2) as pool:
+    with TestClient(create_app(service), base_url="http://127.0.0.1:8000") as client, ThreadPoolExecutor(max_workers=2) as pool:
         first=pool.submit(client.post,'/v1/backtests',json={'coin_id':'bitcoin'})
         try:
             assert entered.wait(3)

@@ -243,3 +243,13 @@ python -m pytest tests -q -ra --strict-markers --strict-config
 ```
 
 The workflow becomes active after the workflow and all project source/tests/requirements are committed and pushed. Check results in the repository's Actions tab. Local validation does not establish that every GitHub runner job has passed; the first hosted run must confirm the matrix. Branch protection is a separate repository setting and is not enabled by this workflow.
+
+## Local web dashboard
+
+Run `python -m uvicorn backend:create_app --factory --host 127.0.0.1 --port 8000 --workers 1 --no-access-log`, then open http://127.0.0.1:8000/. The dashboard uses local assets, without a frontend build step. Analyze fetches CoinGecko evidence; Get AI recommendation explicitly sends a fresh evidence snapshot and any enabled selected-coin position to OpenAI and may incur API charges. API credentials remain in server environment variables. No automatic requests, retries, or browser position persistence are used.
+
+Both evidence endpoints currently show historical prices; live price is N/A. Each AI response displays its own evidence snapshot and cited values. Confidence is model judgment, not a calibrated probability. Backtest limitations and missing history remain visible.
+
+Host must match the configured local authority. If Origin is present it must match too; non-browser clients without Origin remain supported. The default is `http://127.0.0.1:8000`. For a different port, set `CRYPTO_ORIGIN` (for example `$env:CRYPTO_ORIGIN = "http://127.0.0.1:9000"`) and launch Uvicorn on that same port. Only explicit loopback HTTP origins are accepted; localhost is supported only when explicitly configured. Tests use the matching TestClient base URL. These checks are not authentication: keep this a local single-user service, with one worker.
+
+Dashboard interaction regressions (Node.js 22 or newer, no npm dependencies): `node tests/dashboard.test.cjs`. These run the actual browser script with a minimal DOM and mocked fetch responses; they supplement manual browser checks.
