@@ -185,3 +185,15 @@ class PricesResponse(Contract):
 
 class HealthResponse(Contract):
     status: Literal['ok']
+
+
+class CatalogCoin(Contract):
+    id: CoinId
+    name: str
+    symbol: str
+
+
+class CatalogResponse(Contract):
+    coins: list[CatalogCoin]
+    fetched_at_utc: str
+    stale: bool

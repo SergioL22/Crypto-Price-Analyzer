@@ -3,7 +3,60 @@ const $ = id => document.getElementById(id);
 const el = (tag, text) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; return n; };
 const format = value => value === null || value === undefined ? "N/A" : typeof value === "number" ? new Intl.NumberFormat("en-US", {maximumFractionDigits: 6}).format(value) : typeof value === "object" ? JSON.stringify(value) : String(value);
 const resolve = (obj, key) => key.split(".").reduce((value, part) => value !== null && typeof value === "object" && Object.hasOwn(value, part) ? value[part] : undefined, obj);
+const featuredCoins = [
+ {id:"bitcoin",name:"Bitcoin",symbol:"BTC"},
+ {id:"ethereum",name:"Ethereum",symbol:"ETH"},
+ {id:"solana",name:"Solana",symbol:"SOL"},
+ {id:"ripple",name:"XRP",symbol:"XRP"},
+ {id:"dogecoin",name:"Dogecoin",symbol:"DOGE"},
+ {id:"cardano",name:"Cardano",symbol:"ADA"},
+ {id:"litecoin",name:"Litecoin",symbol:"LTC"},
+ {id:"chainlink",name:"Chainlink",symbol:"LINK"}
+];
+let catalogCoins = featuredCoins;
+let catalogPending = false;
+const coinLabel = id => { const coin = catalogCoins.find(c => c.id === id) || featuredCoins.find(c => c.id === id); return coin ? `${coin.name} (${coin.symbol}) · ${coin.id}` : `${id} · custom CoinGecko ID`; };
 let revision = 0, analysisSequence = 0, pendingAI = false;
+function updateCoinLabel() { $("selected-coin").textContent = `Selected: ${coinLabel($("coin").value)}`; }
+function chooseCoin(id) {
+ if (!catalogCoins.some(c => c.id === id) && !featuredCoins.some(c => c.id === id)) return;
+ $("coin").value = id;
+ $("coin-options").value = id;
+ invalidate();
+}
+function filterCoins() {
+ const query = $("coin-search").value.trim().toLowerCase();
+ const allMatches = catalogCoins.filter(c => `${c.name} ${c.symbol} ${c.id}`.toLowerCase().includes(query));
+ const matches = allMatches.slice(0,100);
+ $("coin-options").replaceChildren();
+ const placeholder = el("option", matches.length ? "Choose a matching coin" : "No matching coins");
+ placeholder.value = ""; placeholder.disabled = true;
+ $("coin-options").append(placeholder);
+ for (const coin of matches) { const option = el("option", coinLabel(coin.id)); option.value = coin.id; $("coin-options").append(option); }
+ // Filtering never changes the selected market or starts a request.
+ $("coin-options").value = matches.some(c => c.id === $("coin").value) ? $("coin").value : "";
+ $("coin-options").disabled = matches.length === 0;
+ $("coin-search-status").textContent = matches.length ? `${allMatches.length} matches; showing ${matches.length}. Refine your search or choose a coin.` : "No coins match the loaded list. Try a different name or enter a CoinGecko ID below.";
+}
+$("load-coins").addEventListener("click", async () => {
+ if (catalogPending) return;
+ catalogPending = true; $("load-coins").disabled = true;
+ $("catalog-status").textContent = "Loading coin catalog…";
+ try {
+  const result = await request("/v1/coins");
+  if (!Array.isArray(result.coins) || !result.coins.length || typeof result.stale !== "boolean" || typeof result.fetched_at_utc !== "string" || !result.coins.every(c => c && typeof c.id === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c.id) && c.id.length <= 100 && typeof c.name === "string" && typeof c.symbol === "string")) throw new Error("Invalid catalog");
+  catalogCoins = result.coins;
+  $("catalog-status").textContent = `${result.coins.length} coins loaded · ${result.stale ? "Cached list; refresh unavailable" : "Catalog snapshot"} ${result.fetched_at_utc}. Listing does not guarantee available history.`;
+  filterCoins(); updateCoinLabel();
+ } catch {
+  $("catalog-status").textContent = "Could not load the catalog. Your current list and manual ID entry still work. Retry later.";
+ } finally { catalogPending = false; $("load-coins").disabled = false; }
+});
+$("coin-search").addEventListener("input", filterCoins);
+$("coin-options").addEventListener("change", () => chooseCoin($("coin-options").value));
+for (const coin of featuredCoins.slice(0,3)) { const button = el("button", coin.name); button.type = "button"; button.addEventListener("click", () => { $("coin-search").value = ""; filterCoins(); chooseCoin(coin.id); }); $("coin-quick").append(button); }
+filterCoins();
+updateCoinLabel();
 function status(text) { $("status").textContent = text; }
 function reset(panel, title) { panel.replaceChildren(el("h2", title)); }
 function rows(parent, values) { const dl = el("dl"); for (const [key, value] of Object.entries(values)) { const row = el("div"); row.append(el("dt", key), el("dd", format(value))); dl.append(row); } parent.append(dl); }
@@ -21,7 +74,7 @@ function validEvidence(e) {
 }
 function evidence(parent, e) {
  if (!validEvidence(e)) throw new Error("Invalid response");
- parent.append(el("p", `${e.coin_id} · snapshot ${e.generated_at_utc}`));
+ parent.append(el("h3", coinLabel(e.coin_id)), el("p", `Snapshot ${e.generated_at_utc}`));
  visualSummary(parent, e);
  if (e.history) priceChart(parent, e.history);
  const technical = el("details"); technical.append(el("summary", "Technical details and limitations")); parent.append(technical); parent = technical;
@@ -53,7 +106,7 @@ async function request(url, options) {
  catch { throw new Error("Could not connect to the local server."); }
  let body; try { body = await response.json(); } catch { throw new Error("The server returned an invalid response."); }
  if (!response.ok) {
-  const messages = {403: "Request origin is not allowed. Open the configured local address.", 422: "Check the coin, days, and position fields.", 429: "Server is busy. Try again later.", 502: "Market data is unavailable or invalid.", 503: "History is insufficient or stale.", 500: "An unexpected server error occurred."};
+  const messages = {403: "Request origin is not allowed. Open the configured local address.", 422: "Check the coin, days, and position fields.", 429: "Server is busy. Try again later.", 502: "Market data is unavailable or invalid. Check the selected CoinGecko ID; the provider may also be temporarily unavailable.", 503: "History is insufficient or stale. Try a longer window or another coin; some coins do not have enough recent data.", 500: "An unexpected server error occurred."};
   const error = new Error(messages[response.status] || "Request failed.");
   if (body && body.coverage && typeof body.coverage === "object") error.coverage = body.coverage;
   throw error;
@@ -62,6 +115,8 @@ async function request(url, options) {
 }
 function showError(panel, error) { panel.append(el("p", "Request could not be completed. " + (error.message || "Try again manually."))); if (error.coverage) coverage(panel, error.coverage); }
 function invalidate() {
+ updateCoinLabel();
+ filterCoins();
  revision++; analysisSequence++;
  reset($("analysis"), "Market analysis"); reset($("ai"), "AI assessment");
  status(pendingAI ? "Selection changed. Waiting for the previous AI request to finish; its result will be discarded." : "Selection changed. Run a new analysis or assessment.");

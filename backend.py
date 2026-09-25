@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from backend_models import (BacktestRequest, RecommendationRequest, Evidence, AnalysisResponse, BacktestResponse,
-                            RecommendationResponse, PricesResponse, HealthResponse, ErrorResponse)
+                            RecommendationResponse, CatalogResponse, PricesResponse, HealthResponse, ErrorResponse)
 from backend_service import BackendError, BackendService
 
 
@@ -67,6 +67,10 @@ def create_app(service=None, *, allowed_origin=None):
     @app.get('/health', response_model=HealthResponse)
     async def health():
         return {'status': 'ok'}
+
+    @app.get('/v1/coins', response_model=CatalogResponse, responses=errors)
+    def coins():
+        return service.coins()
 
     @app.get('/v1/prices', response_model=PricesResponse, responses=errors)
     def prices():

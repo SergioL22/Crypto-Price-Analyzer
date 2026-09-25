@@ -6,6 +6,7 @@ from threading import BoundedSemaphore
 import pandas as pd
 from pydantic import ValidationError
 
+from coin_catalog import CoinCatalog
 import analysis
 import api
 from backend_models import Evidence, AnalysisResponse, Market, PricesResponse, BacktestResponse
@@ -40,13 +41,20 @@ class AdmissionGate:
 
 class BackendService:
     def __init__(self, *, history_fetcher=None, prices_fetcher=None, recommender_factory=None,
-                 now=None, market_capacity=4, recommendation_capacity=1):
+                 now=None, market_capacity=4, recommendation_capacity=1, catalog=None):
+        self.catalog = catalog or CoinCatalog()
         self.history_fetcher = history_fetcher or api.fetch_history
         self.prices_fetcher = prices_fetcher or api.fetch_top10
         self.recommender_factory = recommender_factory or OpenAIRecommender.from_environment
         self.now = now or (lambda: datetime.now(timezone.utc))
         self.market_gate = AdmissionGate(market_capacity)
         self.recommendation_gate = AdmissionGate(recommendation_capacity)
+
+    def coins(self):
+        try:
+            return self.catalog.get()
+        except api.UpstreamError:
+            raise BackendError(503, 'catalog_unavailable', 'Coin list unavailable. Use a quick choice or enter a CoinGecko ID.') from None
 
     def _fresh(self, coin_id, days, minimum, current):
         try:

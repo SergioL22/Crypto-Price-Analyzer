@@ -296,7 +296,7 @@ backend.create_app()
 def test_openapi_contract_and_no_cors(setup):
     client,_,_,_=setup
     spec=client.get('/openapi.json').json()
-    assert set(spec['paths'])=={'/health','/v1/prices','/v1/analysis/{coin_id}','/v1/backtests','/v1/recommendations'}
+    assert set(spec['paths'])=={'/health','/v1/coins','/v1/prices','/v1/analysis/{coin_id}','/v1/backtests','/v1/recommendations'}
     response=client.get('/health',headers={'Origin':'https://example.com'})
     assert 'access-control-allow-origin' not in response.headers
 

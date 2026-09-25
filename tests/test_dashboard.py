@@ -50,7 +50,7 @@ def test_static_assets_and_routes_from_other_directory(tmp_path, monkeypatch):
         for asset in ('dashboard.js','dashboard.css'):
             assert client.get('/assets/' + asset).status_code == 200
         assert client.get('/health').json() == {'status':'ok'}
-        assert len(client.get('/openapi.json').json()['paths']) == 5
+        assert len(client.get('/openapi.json').json()['paths']) == 6
         for path in ('/assets/%2e%2e/%2e%2e/backend.py', '/backend.py', '/crypto_data.db'):
             assert client.get(path).status_code == 404
     assert service.mock_calls == []
