@@ -1,6 +1,6 @@
 """HTTP request and response contracts; no terminal or storage dependencies."""
 from typing import Annotated, Literal
-from pydantic import BaseModel, ConfigDict, Field, FiniteFloat
+from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, model_validator
 
 CoinId = Annotated[str, Field(strict=True, min_length=1, max_length=100, pattern=r'^[a-z0-9]+(?:-[a-z0-9]+)*$')]
 BacktestDays = Annotated[int, Field(strict=True, ge=30, le=365)]
@@ -185,6 +185,83 @@ class PricesResponse(Contract):
 
 class HealthResponse(Contract):
     status: Literal['ok']
+
+
+class PortfolioHolding(Contract):
+    coin_id: CoinId
+    amount: Amount
+    average_buy_price_usd: Amount | None
+    cost_basis_usd: Amount | None
+    price_usd: Amount | None
+    price_updated_at_utc: str | None
+    price_status: Literal['current', 'stale', 'unavailable']
+    value_usd: Amount | None
+    unrealized_pnl_usd: FiniteFloat | None
+    allocation_pct: Annotated[FiniteFloat, Field(ge=0, le=100)] | None
+
+
+class SavedHolding(Contract):
+    coin_id: CoinId
+    amount: Amount
+    average_buy_price_usd: Amount | None
+    cost_basis_usd: Amount | None
+
+
+class SavedHoldingsResponse(Contract):
+    version: str
+    holdings: list[SavedHolding]
+
+
+class HoldingRemoval(Contract):
+    coin_id: CoinId
+    version: Annotated[str, Field(strict=True, pattern=r'^[a-f0-9]{64}$')]
+
+
+class RestorePreviewRequest(Contract):
+    content: Annotated[str, Field(strict=True, max_length=500_000)]
+
+
+class RestoreRequest(RestorePreviewRequest):
+    version: Annotated[str, Field(strict=True, pattern=r'^[a-f0-9]{64}$')]
+
+
+class AlertCreate(Contract):
+    coin_id: CoinId
+    alert_type: Literal['price', 'rsi']
+    threshold: Annotated[float, Field(strict=True, ge=0, allow_inf_nan=False)]
+    direction: Literal['above', 'below']
+
+    @model_validator(mode='after')
+    def valid_threshold(self):
+        if self.alert_type == 'rsi' and self.threshold > 100:
+            raise ValueError('RSI must be between 0 and 100')
+        if self.alert_type == 'price' and self.threshold <= 0:
+            raise ValueError('Price must be positive')
+        return self
+
+
+class AlertChange(Contract):
+    active: Annotated[bool, Field(strict=True)]
+
+
+class HoldingUpdate(Contract):
+    coin_id: CoinId
+    amount: Annotated[float, Field(strict=True, gt=0, allow_inf_nan=False)]
+    avg_buy_price: Amount
+    version: Annotated[str, Field(strict=True, pattern=r'^[a-f0-9]{64}$')]
+
+
+class PortfolioResponse(Contract):
+    currency: Literal['usd']
+    fetched_at_utc: str
+    holdings: list[PortfolioHolding]
+    priced_holdings: int
+    total_holdings: int
+    complete: bool
+    priced_value_usd: Amount
+    total_value_usd: Amount | None
+    unrealized_pnl_usd: FiniteFloat | None
+    limitations: list[str]
 
 
 class CatalogCoin(Contract):

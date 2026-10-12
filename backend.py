@@ -1,26 +1,33 @@
 """Local HTTP entry point: uvicorn backend:create_app --factory --host 127.0.0.1."""
-from typing import Annotated
+from typing import Annotated, Literal
 from pathlib import Path as FilePath
 import os
 import re
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Path, Query
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from backend_models import (BacktestRequest, RecommendationRequest, Evidence, AnalysisResponse, BacktestResponse,
                             RecommendationResponse, CatalogResponse, PricesResponse, HealthResponse, ErrorResponse)
 from backend_service import BackendError, BackendService
+from backend_models import PortfolioResponse
+from backend_models import HoldingUpdate, HoldingRemoval, SavedHoldingsResponse
+from backend_models import RestorePreviewRequest, RestoreRequest
+from backend_models import AlertCreate, AlertChange
+from stock_models import AssetCatalog, StockResearch
+from local_config import load_local_config
 
 
 def create_app(service=None, *, allowed_origin=None):
+    load_local_config()
     origin = allowed_origin if allowed_origin is not None else os.environ.get('CRYPTO_ORIGIN', 'http://127.0.0.1:8000')
     match = re.fullmatch(r'http://(127\.0\.0\.1|localhost):([0-9]{1,5})', origin)
     if not match or not 1 <= int(match[2]) <= 65535 or str(int(match[2])) != match[2]:
         raise ValueError('CRYPTO_ORIGIN must be a loopback HTTP origin with an explicit port.')
     authority = origin.removeprefix('http://')
     service = service or BackendService()
-    app = FastAPI(title='Crypto Price Analyzer', version='0.1.0',
+    app = FastAPI(title='Market Research Desk', version='0.1.0',
                   description='Local single-user prototype. No authentication; use one worker on loopback only.')
     app.state.service = service
 
@@ -58,19 +65,77 @@ def create_app(service=None, *, allowed_origin=None):
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['Referrer-Policy'] = 'no-referrer'
         response.headers['Cache-Control'] = 'no-store'
-        if request.url.path == '/' or request.url.path.startswith('/assets/'):
+        if request.url.path in ('/', '/crypto.html', '/stocks.html', '/watchlist.html', '/portfolio.html', '/backups.html', '/alerts.html') or request.url.path.startswith('/assets/'):
             response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
         return response
 
-    errors = {status: {'model': ErrorResponse} for status in (422, 429, 500, 502, 503)}
+    errors = {status: {'model': ErrorResponse} for status in (409, 422, 429, 500, 502, 503)}
 
     @app.get('/health', response_model=HealthResponse)
     async def health():
         return {'status': 'ok'}
 
+    @app.get('/v1/alerts', responses=errors)
+    def alerts():
+        return service.alerts()
+
+    @app.post('/v1/alerts', responses=errors)
+    def create_alert(body: AlertCreate):
+        return service.alerts(body)
+
+    @app.patch('/v1/alerts/{alert_id}', responses=errors)
+    def change_alert(alert_id: Annotated[int, Path(ge=1)], body: AlertChange):
+        return service.alerts(alert_id=alert_id, active=body.active)
+
+    @app.delete('/v1/alerts/{alert_id}', responses=errors)
+    def remove_alert(alert_id: Annotated[int, Path(ge=1)]):
+        return service.alerts(alert_id=alert_id)
+
+    @app.post('/v1/alerts/check', responses=errors)
+    def check_alerts():
+        return service.check_alerts()
+
+    @app.post('/v1/holdings/restore/preview', responses=errors)
+    def preview_restore(body: RestorePreviewRequest):
+        return service.restore_holdings(body, preview=True)
+
+    @app.post('/v1/holdings/restore', response_model=SavedHoldingsResponse, responses=errors)
+    def restore_holdings(body: RestoreRequest):
+        return service.restore_holdings(body)
+
+    @app.get('/v1/holdings/export', response_class=Response, responses=errors)
+    def export_holdings():
+        return Response(service.export_holdings(), media_type='application/json',
+                        headers={'Content-Disposition': 'attachment; filename="portfolio-backup.json"'})
+
+    @app.get('/v1/holdings', response_model=SavedHoldingsResponse, responses=errors)
+    def saved_holdings():
+        return service.saved_holdings()
+
+    @app.put('/v1/holdings', response_model=SavedHoldingsResponse, responses=errors)
+    def update_holding(body: HoldingUpdate):
+        return service.saved_holdings(body)
+
+    @app.delete('/v1/holdings', response_model=SavedHoldingsResponse, responses=errors)
+    def remove_holding(body: HoldingRemoval):
+        return service.saved_holdings(body, remove=True)
+
+    @app.get('/v1/portfolio', response_model=PortfolioResponse, responses=errors)
+    def portfolio():
+        return service.portfolio()
+
     @app.get('/v1/coins', response_model=CatalogResponse, responses=errors)
     def coins():
         return service.coins()
+
+    @app.get('/v1/assets', response_model=AssetCatalog, responses=errors)
+    def asset_catalog(asset_class: Literal['crypto', 'stock', 'etf'] = 'stock'):
+        return service.asset_catalog(asset_class)
+
+    @app.get('/v1/stock-analysis', response_model=StockResearch, responses=errors)
+    def stock_research(asset_id: Annotated[str, Query(min_length=1, max_length=160)],
+                       days: Annotated[int, Query(ge=1, le=3660)] = 3653):
+        return service.stock_research(asset_id, days)
 
     @app.get('/v1/prices', response_model=PricesResponse, responses=errors)
     def prices():

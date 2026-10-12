@@ -5,4 +5,6 @@ from ui import app, run
 
 
 if __name__ == "__main__":
+    from local_config import load_local_config
+    load_local_config()
     run()

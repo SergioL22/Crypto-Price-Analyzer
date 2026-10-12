@@ -1,0 +1,61 @@
+nav{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 24px}nav a{color:#d6efbc;padding:10px 16px;border:1px solid #627660;border-radius:8px;text-decoration:none}nav a:hover{background:#304331}select{display:block;width:100%;margin-top:8px;background:#101915;color:#edf3ea;border:1px solid #627660;border-radius:6px;padding:12px;font:inherit}select:focus-visible,a:focus-visible{outline:3px solid #e7bd66;outline-offset:3px}.watchlist{min-width:0}.watchlist button{margin:6px 8px 6px 0}.watchlist label{min-width:0}input[type=file]{margin-bottom:12px}.alert-card{padding:14px;margin:12px 0;background:#223226;border-radius:10px;overflow-wrap:anywhere}.alert-card h3{margin:0}#alerts-history,#restore-details{overflow-wrap:anywhere}#alerts-history p{padding:10px;border-bottom:1px solid #354536}#restore-details{margin:16px 0}[hidden]{display:none!important}button{max-width:100%;overflow-wrap:anywhere}@media(max-width:480px){.watchlist{padding:16px}nav{gap:8px}nav a{padding:8px 10px}dl>div{gap:12px}#restore-details dl>div{display:block}#restore-details dd{text-align:left}input,select{min-width:0}.fields{display:block}}
+
+nav a[aria-current="page"]{background:#304331;border-color:#a3c783}#watchlist-items a{display:inline-block;color:#d6efbc;padding:10px 14px;margin-right:10px}
+
+/* Shared research workspace: compact hierarchy and touch-friendly controls. */
+:root{color-scheme:dark;--surface:#18251e;--line:#35483b;--accent:#c5ed9c}
+body{background:#0e1712;line-height:1.55}
+main{max-width:1440px;padding:32px 40px 44px;margin-left:210px;max-width:calc(1440px - 210px)}
+header{margin-bottom:22px;padding-bottom:22px;border-color:var(--line)}
+header h1{font-size:clamp(2rem,4vw,3rem);line-height:1.15;letter-spacing:-.04em;margin:10px 0 12px}
+header>p:not(.eyebrow){max-width:65ch;margin:0 0 12px}
+.eyebrow{margin:0;font-weight:650}
+nav{position:fixed;z-index:4;left:18px;top:22px;bottom:22px;width:178px;display:flex;flex-direction:column;align-items:stretch;gap:5px;padding:14px 10px;background:#17231c;border:1px solid var(--line);border-radius:16px;margin:0}
+nav::before{content:"MARKET RESEARCH";color:#c5ed9c;font-size:.66rem;letter-spacing:.14em;font-weight:700;padding:8px 10px 16px}
+nav a{border:1px solid transparent;border-radius:8px;padding:11px 12px;font-size:.9rem;color:#c0cec3;min-height:44px}
+nav a[aria-current="page"]{background:var(--accent);color:#15230f;border-color:var(--accent);font-weight:650}
+nav a:hover:not([aria-current="page"]){background:#293b2e;color:#fff}
+.controls,.watchlist,.results>section{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:26px}
+.controls>h2,.watchlist>h2,.results>section>h2{margin-top:0;font-size:1.2rem}
+.watchlist>p{max-width:85ch}
+.market-setup{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:30px}
+.market-setup>.analysis-setup{border-left:1px solid var(--line);padding-left:30px;min-width:0}
+.market-setup .coin-picker{max-width:none;min-width:0}
+.market-setup .fields{margin-top:0;gap:14px}
+.market-setup .fields label{min-width:140px}
+.coin-picker .note{margin:10px 0 14px}
+.coin-picker select{padding:12px}
+input,select{min-height:46px;background:#101c15;border-color:#526c59;transition:border-color .15s}
+input:hover,select:hover{border-color:#8aab8e}
+input[type=checkbox]{min-height:0;width:18px;height:18px;accent-color:var(--accent);vertical-align:middle}
+button{min-height:44px;transition:background-color .15s,box-shadow .15s}
+button:hover:not(:disabled){box-shadow:0 0 0 2px #a9ce8655}
+button:disabled{cursor:not-allowed;opacity:.55}
+.coin-quick{gap:8px}.coin-quick button{font-size:.82rem;padding:9px 13px}
+.tag{background:#223326;border-color:#476248;color:#daeccf}
+details{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:#121e17}
+summary{font-size:.9rem;font-weight:600;color:#d8e8d2;min-height:24px}
+details[open]>summary{margin-bottom:14px}
+[role=status]:not(:empty){border-left:3px solid #91ad78;padding:10px 14px;background:#202e23;border-radius:0 8px 8px 0;font-size:.88rem}
+#status{margin:22px 0;color:#d8e8d2}
+.results{gap:22px;align-items:start}
+.summary-cards{gap:12px;margin:20px 0}
+.summary-cards article{background:#203327;border:1px solid #3a5140;padding:18px}
+.summary-cards h3{font-size:.93rem;color:#e3f1d9}
+.summary-cards p{line-height:1.65}
+.price-chart{margin:20px 0;padding:18px;background:#101c15;border:1px solid var(--line);border-radius:12px}
+.price-chart>h3{margin:0 0 14px}.price-chart>p{font-size:.82rem}
+.chart-readout{background:#213125;border-radius:8px;padding:12px;line-height:1.8}
+dl>div{padding:12px 0}dd{font-variant-numeric:tabular-nums}
+.chart-table th{color:#dbedce;background:#1c2c21}.chart-table td{font-variant-numeric:tabular-nums}
+.chart-table tr:nth-child(even){background:#203025}
+#watchlist-items li{padding:10px 0;border-bottom:1px solid var(--line)}
+footer{border-top:1px solid var(--line);padding-top:20px;max-width:95ch;line-height:1.8}
+.skip-link{position:absolute;left:16px;top:-100px;z-index:10;background:var(--accent);color:#15230f;padding:12px 18px;border-radius:8px}
+.skip-link:focus{top:12px}
+@media(min-width:1100px){header .tag{position:absolute;right:0;top:6px}}
+@media(max-width:850px){main{margin-left:0;max-width:1440px;padding:24px}.market-setup{grid-template-columns:1fr;gap:22px}.market-setup>.analysis-setup{border-left:0;border-top:1px solid var(--line);padding:22px 0 0}.market-setup .fields{margin-top:0}nav{position:static;width:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:6px;margin:0 0 26px}nav::before{display:none}nav a{padding:10px 13px;text-align:center}}
+@media(max-width:480px){main{padding:22px 14px}header{padding-bottom:18px}header h1{font-size:2rem}nav{grid-template-columns:1fr 1fr;gap:5px}nav a{text-align:center;padding:10px 7px}.controls,.watchlist,.results>section{padding:18px;border-radius:12px}.price-chart{padding:10px}.fields label{min-width:0}.market-setup label:first-child{margin-top:0}dl>div{flex-direction:column;gap:4px}dd{text-align:left}.chart-controls label{min-height:36px}.summary-cards article{padding:15px}}
+@media(prefers-reduced-motion:reduce){input,select,button{transition:none}}
+
+.stock-search-row{display:flex;align-items:end;gap:12px}.stock-search-row label{min-width:0}.filter-button{background:#24372a;color:#d9efc7;border:1px solid #78926d;white-space:nowrap}.filter-button span{font-size:1.15rem;vertical-align:-1px}.filter-button[aria-expanded="true"]{background:var(--accent);color:#15230f;border-color:var(--accent)}.filter-popover{margin:14px 0;padding:16px;border:1px solid #627c67;border-radius:12px;background:#122018;box-shadow:0 12px 28px #0005}.filter-popover .fields{margin:0}.filter-popover .note{margin-bottom:0}@media(max-width:480px){.stock-search-row{align-items:stretch;flex-direction:column}.filter-button{width:100%}}

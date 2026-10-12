@@ -44,6 +44,7 @@ jobs:
       PYTHONUTF8: '1'
       OPENAI_API_KEY: ''
       OPENAI_MODEL: ''
+      TWELVE_DATA_API_KEY: ''
     steps:
       - name: Check out code
         uses: actions/checkout@v6

@@ -1,7 +1,4 @@
 "use strict";
-const $ = id => document.getElementById(id);
-const el = (tag, text) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; return n; };
-const format = value => value === null || value === undefined ? "N/A" : typeof value === "number" ? new Intl.NumberFormat("en-US", {maximumFractionDigits: 6}).format(value) : typeof value === "object" ? JSON.stringify(value) : String(value);
 const resolve = (obj, key) => key.split(".").reduce((value, part) => value !== null && typeof value === "object" && Object.hasOwn(value, part) ? value[part] : undefined, obj);
 const featuredCoins = [
  {id:"bitcoin",name:"Bitcoin",symbol:"BTC"},
@@ -59,7 +56,6 @@ filterCoins();
 updateCoinLabel();
 function status(text) { $("status").textContent = text; }
 function reset(panel, title) { panel.replaceChildren(el("h2", title)); }
-function rows(parent, values) { const dl = el("dl"); for (const [key, value] of Object.entries(values)) { const row = el("div"); row.append(el("dt", key), el("dd", format(value))); dl.append(row); } parent.append(dl); }
 function coverage(parent, w) {
  rows(parent, {"Requested UTC dates": `${w.expected_start} → ${w.expected_end}`, "Observed dates": `${format(w.start)} → ${format(w.end)}`, "Observations": w.observations, "Missing days": w.missing_days, "Leading / internal / trailing gaps": `${w.leading_missing_days} / ${w.internal_missing_days} / ${w.trailing_missing_days}`, "Latest observation age (days)": w.latest_observation_age_days});
 }
@@ -74,10 +70,14 @@ function validEvidence(e) {
 }
 function evidence(parent, e) {
  if (!validEvidence(e)) throw new Error("Invalid response");
- parent.append(el("h3", coinLabel(e.coin_id)), el("p", `Snapshot ${e.generated_at_utc}`));
- visualSummary(parent, e);
+ parent.append(el("h3", coinLabel(e.coin_id)));
+ const priceHero=el("article");priceHero.className="price-hero";
+ const priceValue=el("p",priceLabel(e.indicators.latest_history_price_usd));priceValue.className="price-value";
+ priceHero.append(el("h3","Latest historical price"),priceValue,el("p","USD · historical observation, not a live quote"));parent.append(priceHero);
  if (e.history) priceChart(parent, e.history);
+ visualSummary(parent, e);
  const technical = el("details"); technical.append(el("summary", "Technical details and limitations")); parent.append(technical); parent = technical;
+ parent.append(el("p", `Snapshot ${e.generated_at_utc}`));
  coverage(parent, e.window);
  parent.append(el("h3", "Indicators"));
  const i = e.indicators;
@@ -97,19 +97,6 @@ function selection(position) {
   const amount = Number($("amount").value), cost = Number($("cost").value);
   if (!$("amount").value.trim() || !$("cost").value.trim() || !Number.isFinite(amount) || !Number.isFinite(cost) || amount < 0 || cost < 0) { status("Enter a finite, nonnegative amount and buy price."); return null; }
   body.selected_position = {amount, avg_buy_price: cost};
- }
- return body;
-}
-async function request(url, options) {
- let response;
- try { response = await fetch(url, options); }
- catch { throw new Error("Could not connect to the local server."); }
- let body; try { body = await response.json(); } catch { throw new Error("The server returned an invalid response."); }
- if (!response.ok) {
-  const messages = {403: "Request origin is not allowed. Open the configured local address.", 422: "Check the coin, days, and position fields.", 429: "Server is busy. Try again later.", 502: "Market data is unavailable or invalid. Check the selected CoinGecko ID; the provider may also be temporarily unavailable.", 503: "History is insufficient or stale. Try a longer window or another coin; some coins do not have enough recent data.", 500: "An unexpected server error occurred."};
-  const error = new Error(messages[response.status] || "Request failed.");
-  if (body && body.coverage && typeof body.coverage === "object") error.coverage = body.coverage;
-  throw error;
  }
  return body;
 }
@@ -156,3 +143,8 @@ $("recommend").addEventListener("click", async () => {
  } catch (error) { if (rev === revision) { showError(panel, error); status("AI request failed. No automatic retry was made."); } }
  finally { pendingAI = false; $("recommend").disabled = false; if (rev !== revision) status("Previous AI request finished. You can request an assessment for the current selection."); }
 });
+
+if (typeof window !== "undefined" && window.location) {
+ const requestedCoin = new URLSearchParams(window.location.search).get("coin");
+ if (requestedCoin && requestedCoin.length <= 100 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(requestedCoin)) { $("coin").value = requestedCoin; invalidate(); }
+}

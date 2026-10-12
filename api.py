@@ -47,6 +47,14 @@ def _get(endpoint: str, params: dict | None = None) -> dict:
     raise UpstreamError("CoinGecko max retries reached (rate limited).")
 
 
+def fetch_portfolio_prices(coin_ids):
+    """Fetch a batch by canonical ID, with provider timestamps."""
+    if not coin_ids:
+        return {}
+    return _get('simple/price', {'ids': ','.join(coin_ids), 'vs_currencies': CURRENCY,
+                               'include_last_updated_at': 'true'})
+
+
 def fetch_top10() -> list[dict]:
     """Fetch top 10 coins by market cap."""
     return _get("coins/markets", {
@@ -99,4 +107,3 @@ def fetch_ohlc(coin_id: str, days: int) -> pd.DataFrame:
     df = pd.DataFrame(data, columns=["timestamp", "Open", "High", "Low", "Close"])
     df.index = pd.to_datetime(df["timestamp"], unit="ms", utc=True).dt.tz_localize(None)
     return df[["Open", "High", "Low", "Close"]]
-

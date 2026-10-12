@@ -13,12 +13,15 @@
  }
  function render(coins) {
   $("watchlist-items").replaceChildren();
-  if (!coins.length) $("watchlist-items").append(el("li", "Your watchlist is empty. Select a coin and add it here."));
+  if (!coins.length) {const item=el("li", "Your watchlist is empty. Select a coin and add it here.");item.className="empty-state";$("watchlist-items").append(item);}
   for (const id of coins) {
-   const row = el("li"), open = el("button", coinLabel(id)), remove = el("button", "Remove");
+   const separate = Boolean($("watchlist-coin"));
+   const row = el("li"), open = el(separate ? "a" : "button", typeof coinLabel === "function" ? coinLabel(id) : id), remove = el("button", "Remove");
+   if (separate) open.href = `/crypto.html?coin=${encodeURIComponent(id)}`;
    open.type = remove.type = "button";
    remove.setAttribute("aria-label", `Remove ${id} from watchlist`);
    open.addEventListener("click", () => {
+    if (separate) return;
     $("coin").value = id;
     $("coin-search").value = "";
     invalidate();
@@ -41,7 +44,7 @@
   } catch { message("Watchlist was not saved. Check browser storage permissions or available space; existing saved data was not replaced by the app."); }
  }
  $("watchlist-add").addEventListener("click", () => {
-  const id = $("coin").value;
+  const id = ($("watchlist-coin") || $("coin")).value.trim();
   if (!validId(id)) { message("Select a coin or enter a valid lowercase CoinGecko ID first."); return; }
   change(coins => {
    if (coins.includes(id)) { message(`${id} is already on your watchlist.`); return null; }

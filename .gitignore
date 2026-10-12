@@ -2,9 +2,15 @@
 __pycache__/
 *.py[cod]
 portfolio.json
+portfolio-backup*.json
+.portfolio-*.tmp
 .DS_Store
 
 .pytest_cache/
+research_datasets.db
+research_datasets.db-journal
+research_datasets.db-wal
+research_datasets.db-shm
 
 # Local runtime data and machine-specific files
 crypto_data.db
@@ -14,3 +20,8 @@ crypto_data.db-shm
 alerts.log
 main.py.bak_pre_fixes
 .claude/settings.local.json
+
+# Local credentials; only the empty example belongs in source control.
+.env
+.env.*
+!.env.example
