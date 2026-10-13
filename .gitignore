@@ -15,6 +15,10 @@ prediction_journal.db
 prediction_journal.db-journal
 prediction_journal.db-wal
 prediction_journal.db-shm
+accounts-staging.db
+accounts-staging.db-journal
+accounts-staging.db-wal
+accounts-staging.db-shm
 
 # Local runtime data and machine-specific files
 crypto_data.db

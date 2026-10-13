@@ -306,3 +306,7 @@ The stock/ETF workspace now includes interactive history navigation, optional ge
 - [Hosted app and licensing plan](APP_RELEASE_PLAN.md)
 
 The hosted app is planned, not deployed. Current operation remains a single-user loopback-only local application. Earlier phase-specific sections describe the capabilities at those milestones.
+
+## Phase 5 account staging
+
+A separate account factory adds managed OIDC integration, per-user server storage, revision-safe edits, explicit import previews and account exports. Try the loopback-only sample profiles using the [Phase 5 guide](PHASE5_COMPLETION.md). The original local research app remains on its own factory. Real hosted identity/database setup and market-display licensing are pending; the sample profiles must not be publicly exposed.

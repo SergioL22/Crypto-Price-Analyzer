@@ -1,3 +1,4 @@
 -r requirements-backend.txt
+-r requirements-accounts.txt
 httpx==0.28.1
 pytest>=8.0
