@@ -26,6 +26,9 @@
   if(description) description.textContent = `Your ${isCrypto ? "crypto" : "stock and ETF"} workspace. Open Explore to research an asset, or manage your saved items here.`;
  }
  if(compare) {
+  if(heading)heading.textContent="Compare stocks & ETFs";
+  const description=document.querySelector("header > p:not(.eyebrow)");
+  if(description)description.textContent="Compare the price history of your selected companies and funds.";
   const title=document.getElementById("stocks-title");
   if(title) title.textContent="Choose listings to compare";
  }

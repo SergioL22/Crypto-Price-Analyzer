@@ -17,72 +17,109 @@ function visualSummary(parent, e) {
  parent.append(cards,extra);
  parent.append(el("p", `${e.window.observations} daily observations · ${e.window.missing_days} missing days. The current UTC day may be incomplete. These summaries describe indicators, not trading recommendations.`));
 }
+// One local chart window; gestures never fetch or interpolate provider data.
+class ChartWindow {
+ constructor(length) {this.length=length;this.first=0;this.last=length-1;}
+ set(first,last) {const count=Math.max(1,Math.min(this.length,Math.round(last-first+1)));this.first=Math.max(0,Math.min(this.length-count,Math.round(first)));this.last=this.first+count-1;}
+ pan(steps) {this.set(this.first+steps,this.last+steps);}
+ zoom(factor,anchor=.5) {const count=this.last-this.first+1,target=Math.max(Math.min(2,this.length),Math.min(this.length,Math.round(count*factor)));const focus=this.first+(count-1)*anchor;this.set(focus-(target-1)*anchor,focus+(target-1)*(1-anchor));}
+}
 function priceChart(parent, points, options = {}) {
- if (!Array.isArray(points) || points.length < 2) return;
- const keys = ["price", "ma_7", "ma_25", "bollinger_lower", "bollinger_middle", "bollinger_upper"];
- let previous = -Infinity;
- for (const p of points) {
-  const time = Date.parse(p.date + "T00:00:00Z");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(p.date) || !Number.isFinite(time) || time <= previous || !Number.isFinite(p.price) || p.price <= 0 || keys.some(k => p[k] !== null && !Number.isFinite(p[k]))) throw new Error("Invalid chart data");
-  previous = time;
- }
- const section = el("section"); section.className = "price-chart";
- section.append(el("h3", "Price history · USD"));
- const controls = el("div"); controls.className = "chart-controls";
- const toggle = (labelText, checked) => { const label = el("label"), input = el("input"); input.type = "checkbox"; input.checked = checked; label.append(input, el("span", labelText)); controls.append(label); return input; };
- const averages = toggle("Moving averages (7 / 25)", false), bands = toggle("Bollinger Bands (20)", false);
- const plot = el("div"), readout = el("p"); readout.className = "chart-readout";
- const selected = el("p");selected.className="chart-selected";selected.setAttribute("aria-live","polite");
- const navigation=el("div");navigation.className="chart-navigation";
- const previousPoint=el("button","← Previous"),nextPoint=el("button","Next →"),latestPoint=el("button","Latest");
- for(const button of [previousPoint,nextPoint,latestPoint]) {button.type="button";button.className="secondary";navigation.append(button);}
- const zoomLabel=el("label","Show"),zoom=el("select");
- for(const [value,label] of [["all","Full history"],["30","Last month"],["90","Last 3 months"],["365","Last year"]]){const option=el("option",label);option.value=value;zoom.append(option);}zoom.value="all";zoomLabel.append(zoom);navigation.append(zoomLabel);
- const sliderLabel = el("label", "Slide to explore dates · arrow keys also work"); const slider = el("input"); slider.type = "range"; slider.min = "0"; slider.max = String(points.length - 1); slider.step = "1"; slider.value = slider.max; sliderLabel.append(slider);
- const svgNode = (name, attributes = {}, text) => { const n = document.createElementNS("http://www.w3.org/2000/svg", name); for (const [k,v] of Object.entries(attributes)) n.setAttribute(k, String(v)); if (text !== undefined) n.textContent = text; return n; };
- const colors = {price: "#7db1ff", ma_7: "#5ee0d2", ma_25: "#f4bb78", bollinger_lower: "#bd9fe8", bollinger_middle: "#bd9fe8", bollinger_upper: "#bd9fe8"};
- function draw() {
-  const cutoff=zoom.value==="all" ? -Infinity : Date.parse(points.at(-1).date)-(Number(zoom.value)-1)*86400000;
-  const firstIndex=points.findIndex(p=>Date.parse(p.date)>=cutoff);
-  const visible=points.slice(firstIndex);
-  slider.min=String(firstIndex);slider.value=String(Math.max(firstIndex,Math.min(points.length-1,Number(slider.value))));
-  const shown = ["price", ...(averages.checked ? ["ma_7", "ma_25"] : []), ...(bands.checked ? ["bollinger_lower", "bollinger_middle", "bollinger_upper"] : [])];
-  const values = visible.flatMap(p => shown.map(k => p[k]).filter(Number.isFinite));
-  let low = Math.min(...values), high = Math.max(...values); const pad = (high - low) * .08 || Math.abs(high) * .01 || 1; low -= pad; high += pad;
-  const start = Date.parse(visible[0].date), end = Date.parse(visible.at(-1).date);
-  const x = p => end===start ? 232.5 : 65 + (Date.parse(p.date) - start) / (end - start) * 335;
-  const y = value => 235 - (value - low) / (high - low) * 205;
-  const svg = svgNode("svg", {viewBox: "0 0 420 280", role: "img", "aria-label": options.sessions ? "Split-adjusted USD prices by exchange session. Use the slider or table for exact values." : "Historical price in USD over UTC dates. Use the observation slider or data table for exact values."});
-  for (let j = 0; j <= 4; j++) { const value = low + (high - low) * j / 4, pos = y(value); svg.append(svgNode("line", {x1:65,x2:400,y1:pos,y2:pos,stroke:"#39493e"}), svgNode("text", {x:57,y:pos+4,"text-anchor":"end",fill:"#c4d0c6","font-size":12}, new Intl.NumberFormat("en-US",{notation:"compact",maximumFractionDigits:2}).format(value))); }
-  for (const k of shown) {
-   let d = "", lastTime = null;
-   for (const p of visible) { const time = Date.parse(p.date); if (p[k] === null) { lastTime = null; continue; } const move = lastTime === null || (options.sessions ? p.break_before === true : time - lastTime > 86400000); d += `${move ? "M" : "L"}${x(p).toFixed(2)},${y(p[k]).toFixed(2)} `; lastTime = time; }
-   svg.append(svgNode("path", {d,fill:"none",stroke:colors[k],"stroke-width":k === "price" ? 2.5 : 1.5,"stroke-dasharray":k.startsWith("bollinger") ? "4 4" : k === "ma_25" ? "8 3" : "none"}));
+ if(!Array.isArray(points)||points.length<2)return;
+ const keys=['price','ma_7','ma_25','bollinger_lower','bollinger_middle','bollinger_upper'];
+ let previous=-Infinity;
+ for(const point of points){const time=Date.parse(point.date+'T00:00:00Z');if(!/^\d{4}-\d{2}-\d{2}$/.test(point.date)||!Number.isFinite(time)||time<=previous||!Number.isFinite(point.price)||point.price<=0||keys.some(key=>point[key]!==null&&!Number.isFinite(point[key])))throw Error('Invalid chart data');previous=time;}
+ const bars=options.bars;
+ const hasBars=Array.isArray(bars)&&bars.length===points.length&&bars.every((bar,i)=>bar.date===points[i].date&&bar.close===points[i].price&&['open','high','low','close'].every(k=>Number.isFinite(bar[k])&&bar[k]>0)&&bar.low<=Math.min(bar.open,bar.close)&&bar.high>=Math.max(bar.open,bar.close));
+ const hasVolume=hasBars&&bars.every(bar=>Number.isFinite(bar.volume)&&bar.volume>=0);
+ const view=new ChartWindow(points.length);
+ let selectedIndex=points.length-1,expanded=false,svg,marker,crossV,crossH,scaleX,scaleY,gesture=null,pinch=null;
+ const pointers=new Map();
+ const section=el('section');section.className='price-chart';section.setAttribute('tabindex','-1');
+ section.append(el('h3','Price history · USD'));
+ const selected=el('p');selected.className='chart-selected';selected.setAttribute('aria-live','polite');
+ const navigation=el('div');navigation.className='chart-navigation';
+ const button=text=>{const node=el('button',text);node.type='button';node.className='secondary';navigation.append(node);return node;};
+ const back=button('← Previous'),next=button('Next →'),latest=button('Latest'),reset=button('Reset view'),full=button('Fullscreen');
+ const select=(label,entries)=>{const wrapper=el('label',label),node=el('select');for(const [value,text] of entries){const option=el('option',text);option.value=value;node.append(option);}node.value=entries[0][0];wrapper.append(node);navigation.append(wrapper);return node;};
+ const range=select('Show',[['all','Full history'],['30','Last month'],['90','Last 3 months'],['365','Last year'],['custom','Custom view']]);
+ const style=hasBars?select('Chart',[['line','Line'],['candles','Candlesticks']]):null;
+ const plot=el('div');plot.className='chart-plot';plot.setAttribute('tabindex','0');plot.setAttribute('role','group');plot.setAttribute('aria-label','Interactive price chart. Arrow keys select dates; plus and minus zoom. Drag to pan, scroll or pinch to zoom.');
+ const tooltip=el('p');tooltip.className='chart-tooltip';tooltip.hidden=true;
+ const drawing=el('div');plot.append(drawing,tooltip);
+ const volumePlot=el('div');volumePlot.className='chart-volume';
+ const sliderLabel=el('label','Slide to explore dates · arrow keys also work'),slider=el('input');slider.type='range';slider.step='1';slider.value=String(selectedIndex);sliderLabel.append(slider);
+ const help=el('p','Drag to move through history. Scroll or pinch to zoom. Hover or tap for date and price. All views use already-loaded data.');help.className='chart-help';
+ const status=el('p');status.className='chart-note';status.setAttribute('role','status');
+ const controls=el('div');controls.className='chart-controls';
+ const toggle=text=>{const label=el('label'),input=el('input');input.type='checkbox';input.checked=false;label.append(input,el('span',text));controls.append(label);return input;};
+ const averages=toggle('Moving averages (7 / 25)'),bands=toggle('Bollinger Bands (20)'),volume=hasVolume?toggle('Daily share volume'):null;
+ const readout=el('p');readout.className='chart-readout';
+ const node=(tag,attrs={},text)=>{const n=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [key,value]of Object.entries(attrs))n.setAttribute(key,String(value));if(text!==undefined)n.textContent=text;return n;};
+ const colors={price:'#7db1ff',ma_7:'#5ee0d2',ma_25:'#f4bb78',bollinger_lower:'#bd9fe8',bollinger_middle:'#bd9fe8',bollinger_upper:'#bd9fe8'};
+ function inspect(index,announce=true) {
+  index=Math.max(view.first,Math.min(view.last,index));const p=points[index];
+  marker.setAttribute('cx',scaleX(p));marker.setAttribute('cy',scaleY(p.price));
+  crossV.setAttribute('x1',scaleX(p));crossV.setAttribute('x2',scaleX(p));crossH.setAttribute('y1',scaleY(p.price));crossH.setAttribute('y2',scaleY(p.price));
+  tooltip.textContent=`${p.date} · ${priceLabel(p.price)}`;
+  if(announce){selectedIndex=index;slider.value=String(index);selected.textContent=`${p.date} ${options.sessions?'exchange close':'UTC sample'} · ${priceLabel(p.price)}`;slider.setAttribute('aria-valuetext',selected.textContent);back.disabled=index<=view.first;next.disabled=index>=view.last;
+   readout.textContent=`${p.date} ${options.sessions?'exchange session':'UTC'} · Price $${format(p.price)} · MA7 ${format(p.ma_7)} · MA25 ${format(p.ma_25)} · Bands ${format(p.bollinger_lower)} / ${format(p.bollinger_middle)} / ${format(p.bollinger_upper)}`;
+   if(hasBars){const b=bars[index];readout.append(el('span',` · Open ${priceLabel(b.open)} · High ${priceLabel(b.high)} · Low ${priceLabel(b.low)} · Close ${priceLabel(b.close)} · Volume ${format(b.volume)}`));}
   }
-  svg.append(svgNode("text",{x:65,y:265,fill:"#c4d0c6","font-size":12},visible[0].date),svgNode("text",{x:400,y:265,"text-anchor":"end",fill:"#c4d0c6","font-size":12},visible.at(-1).date));
-  const p = points[Number(slider.value)]; svg.append(svgNode("circle",{cx:x(p),cy:y(p.price),r:4,fill:"#fff"}));
-  selected.textContent=`${p.date} ${options.sessions ? "exchange close" : "UTC sample"} · ${priceLabel(p.price)}`;
-  slider.setAttribute("aria-valuetext",selected.textContent);
-  previousPoint.disabled=Number(slider.value)<=firstIndex;nextPoint.disabled=Number(slider.value)>=points.length-1;
-  svg.addEventListener("click",event=>{
-   const rect=svg.getBoundingClientRect();
-   if(!rect.width)return;
-   const fraction=Math.max(0,Math.min(1,((event.clientX-rect.left)/rect.width*420-65)/335));
-   const target=start+fraction*(end-start);
-   let nearest=firstIndex;for(let i=firstIndex+1;i<points.length;i++)if(Math.abs(Date.parse(points[i].date)-target)<Math.abs(Date.parse(points[nearest].date)-target))nearest=i;
-   slider.value=String(nearest);draw();
-  });
-  readout.textContent = `${p.date} ${options.sessions ? "exchange session" : "UTC"} · Price $${format(p.price)} · MA7 ${format(p.ma_7)} · MA25 ${format(p.ma_25)} · Bands ${format(p.bollinger_lower)} / ${format(p.bollinger_middle)} / ${format(p.bollinger_upper)}`;
-  plot.replaceChildren(svg);
  }
- averages.addEventListener("change",draw); bands.addEventListener("change",draw); slider.addEventListener("input",draw);
- previousPoint.addEventListener("click",()=>{slider.value=String(Math.max(Number(slider.min),Number(slider.value)-1));draw();});
- nextPoint.addEventListener("click",()=>{slider.value=String(Math.min(points.length-1,Number(slider.value)+1));draw();});
- latestPoint.addEventListener("click",()=>{slider.value=slider.max;draw();});zoom.addEventListener("change",draw);
- section.append(selected,navigation,plot,sliderLabel,el("p","Tap or click the chart to select a nearby available date. Zoom uses the history already loaded; gaps stay visible."));
- const tools=el("details");tools.className="chart-tools";tools.append(el("summary","Chart tools and exact values"),controls,el("p","Solid blue: price · teal: MA7 · dashed orange: MA25 · dotted purple: bands. Averages use observations, not elapsed days. Gaps are not filled; early averages are unavailable until enough observations exist. Zoom changes the view only; averages use the original loaded history."),readout);
- const tableDetails = el("details"), table = el("table"), head = el("tr");
- [options.sessions ? "Exchange session" : "UTC date","Price (USD)","MA7","MA25","Lower band","Middle band","Upper band"].forEach(t => head.append(el("th",t))); table.append(head);
- points.forEach(p => { const row = el("tr"); [p.date,p.price,p.ma_7,p.ma_25,p.bollinger_lower,p.bollinger_middle,p.bollinger_upper].forEach(v => row.append(el("td",format(v)))); table.append(row); });
- tableDetails.className = "chart-table"; tableDetails.append(el("summary","Chart data table"),table); tools.append(tableDetails);section.append(tools); parent.append(section); draw();
+ function draw() {
+  const visible=points.slice(view.first,view.last+1),shown=['price',...(averages.checked?['ma_7','ma_25']:[]),...(bands.checked?['bollinger_lower','bollinger_middle','bollinger_upper']:[])];
+  const values=visible.flatMap(p=>shown.map(k=>p[k]).filter(Number.isFinite));
+  if(style?.value==='candles')for(let i=view.first;i<=view.last;i++)values.push(bars[i].low,bars[i].high);
+  let low=Math.min(...values),high=Math.max(...values);const pad=(high-low)*.08||high*.01||1;low-=pad;high+=pad;
+  const start=Date.parse(visible[0].date),end=Date.parse(visible.at(-1).date);
+  scaleX=p=>start===end?232.5:65+(Date.parse(p.date)-start)/(end-start)*335;scaleY=value=>235-(value-low)/(high-low)*205;
+  svg=node('svg',{viewBox:'0 0 420 280',role:'img','aria-label':`${style?.value==='candles'?'Split-adjusted daily OHLC candlesticks':'Historical USD prices'} from ${visible[0].date} to ${visible.at(-1).date}. Missing data is not filled.`});
+  for(let j=0;j<=4;j++){const value=low+(high-low)*j/4,pos=scaleY(value);svg.append(node('line',{x1:65,x2:400,y1:pos,y2:pos,stroke:'#293e5c'}),node('text',{x:57,y:pos+4,'text-anchor':'end',fill:'#aebed4','font-size':12},new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:2}).format(value)));}
+  for(const key of shown){if(key==='price'&&style?.value==='candles')continue;let d='',lastTime=null;for(const p of visible){const time=Date.parse(p.date);if(p[key]===null){lastTime=null;continue;}const move=lastTime===null||(options.sessions?p.break_before===true:time-lastTime>86400000);d+=`${move?'M':'L'}${scaleX(p).toFixed(2)},${scaleY(p[key]).toFixed(2)} `;lastTime=time;}svg.append(node('path',{d,fill:'none',stroke:colors[key],'stroke-width':key==='price'?2.5:1.5,'stroke-dasharray':key.startsWith('bollinger')?'4 4':key==='ma_25'?'8 3':'none'}));}
+  if(style?.value==='candles'){
+   const distances=visible.slice(1).map((p,i)=>scaleX(p)-scaleX(visible[i]));const width=Math.max(.3,Math.min(10,(distances.length?Math.min(...distances):16)*.65));
+   for(let i=view.first;i<=view.last;i++){const b=bars[i],x=scaleX(points[i]),color=b.close>=b.open?'#5ee0b2':'#ff8996';svg.append(node('line',{x1:x,x2:x,y1:scaleY(b.high),y2:scaleY(b.low),stroke:color,'stroke-width':Math.max(.5,width*.2)}),node('rect',{x:x-width/2,y:Math.min(scaleY(b.open),scaleY(b.close)),width,height:Math.max(.6,Math.abs(scaleY(b.open)-scaleY(b.close))),fill:color,'data-candle':b.date}));}
+  }
+  svg.append(node('text',{x:65,y:265,fill:'#aebed4','font-size':12},visible[0].date),node('text',{x:400,y:265,'text-anchor':'end',fill:'#aebed4','font-size':12},visible.at(-1).date));
+  crossV=node('line',{y1:30,y2:235,stroke:'#99b9e0','stroke-dasharray':'3 3'});crossH=node('line',{x1:65,x2:400,stroke:'#99b9e0','stroke-dasharray':'3 3'});marker=node('circle',{r:4,fill:'#fff'});svg.append(crossV,crossH,marker);drawing.replaceChildren(svg);
+  slider.min=String(view.first);slider.max=String(view.last);inspect(selectedIndex);
+  volumePlot.replaceChildren();volumePlot.hidden=!volume?.checked;
+  if(volume?.checked){const max=Math.max(...bars.slice(view.first,view.last+1).map(b=>b.volume))||1,chart=node('svg',{viewBox:'0 0 420 75',role:'img','aria-label':'Daily share volume over the same visible dates'});chart.append(node('text',{x:65,y:12,fill:'#aebed4','font-size':10},'Daily share volume'));for(let i=view.first;i<=view.last;i++){const b=bars[i],height=b.volume/max*48;chart.append(node('rect',{x:scaleX(points[i])-Math.max(.3,Math.min(6,160/visible.length))/2,y:65-height,width:Math.max(.3,Math.min(6,160/visible.length)),height,fill:'#7db1ff'}));}volumePlot.append(chart);}
+ }
+ function nearest(fraction){const first=Date.parse(points[view.first].date),last=Date.parse(points[view.last].date),target=first+Math.max(0,Math.min(1,fraction))*(last-first);let best=view.first;for(let i=view.first+1;i<=view.last;i++)if(Math.abs(Date.parse(points[i].date)-target)<Math.abs(Date.parse(points[best].date)-target))best=i;return best;}
+ function fraction(event){const rect=svg.getBoundingClientRect();return Math.max(0,Math.min(1,((event.clientX-rect.left)/rect.width*420-65)/335));}
+ function hover(event){inspect(nearest(fraction(event)),false);const rect=plot.getBoundingClientRect();tooltip.hidden=false;tooltip.style.left=`${Math.max(0,Math.min(rect.width-170,event.clientX-rect.left+12))}px`;tooltip.style.top=`${Math.max(0,event.clientY-rect.top-45)}px`;}
+ plot.addEventListener('pointerdown',event=>{if(event.pointerType==='mouse'&&event.button!==0)return;plot.focus?.();plot.setPointerCapture?.(event.pointerId);pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});gesture={x:event.clientX,y:event.clientY,first:view.first,last:view.last,moved:false};if(pointers.size===2){const [a,b]=[...pointers.values()];pinch={distance:Math.hypot(a.x-b.x,a.y-b.y)||1,first:view.first,last:view.last};}});
+ plot.addEventListener('pointermove',event=>{
+  if(!pointers.has(event.pointerId)){if(event.pointerType==='mouse')hover(event);return;}
+  pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
+  if(pointers.size===2&&pinch){const [a,b]=[...pointers.values()],distance=Math.hypot(a.x-b.x,a.y-b.y)||1;view.set(pinch.first,pinch.last);view.zoom(pinch.distance/distance);gesture.moved=true;range.value='custom';draw();return;}
+  if(!gesture)return;const delta=event.clientX-gesture.x;if(Math.abs(delta)<5&&!gesture.moved)return;gesture.moved=true;view.set(gesture.first,gesture.last);view.pan(Math.round(-delta/(svg.getBoundingClientRect().width*335/420)*(gesture.last-gesture.first+1)));range.value='custom';draw();tooltip.hidden=true;
+ });
+ function release(event){if(gesture&&!gesture.moved&&pointers.size===1)inspect(nearest(fraction(event)));pointers.delete(event.pointerId);pinch=null;if(!pointers.size)gesture=null;else{const p=[...pointers.values()][0];gesture={x:p.x,y:p.y,first:view.first,last:view.last,moved:true};}tooltip.hidden=true;}
+ plot.addEventListener('pointerup',release);plot.addEventListener('pointercancel',()=>{pointers.clear();gesture=null;pinch=null;tooltip.hidden=true;});
+ plot.addEventListener('pointerleave',()=>{if(!pointers.size){tooltip.hidden=true;inspect(selectedIndex);}});
+ plot.addEventListener('wheel',event=>{event.preventDefault();const amount=event.deltaMode===1?event.deltaY*16:event.deltaMode===2?event.deltaY*280:event.deltaY;view.zoom(Math.exp(Math.max(-1,Math.min(1,amount*.002))),fraction(event));range.value='custom';tooltip.hidden=true;draw();},{passive:false});
+ plot.addEventListener('keydown',event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();inspect(selectedIndex+(event.key==='ArrowLeft'?-1:1));}else if(['+','=','-'].includes(event.key)){event.preventDefault();view.zoom(event.key==='-'?1.3:.75);range.value='custom';draw();}else if(event.key==='Home'||event.key==='End'){event.preventDefault();inspect(event.key==='Home'?view.first:view.last);}});
+ back.addEventListener('click',()=>inspect(selectedIndex-1));next.addEventListener('click',()=>inspect(selectedIndex+1));slider.addEventListener('input',()=>inspect(Number(slider.value)));
+ latest.addEventListener('click',()=>{const count=view.last-view.first+1;view.set(points.length-count,points.length-1);selectedIndex=points.length-1;draw();});
+ reset.addEventListener('click',()=>{view.set(0,points.length-1);range.value='all';selectedIndex=points.length-1;draw();});
+ range.addEventListener('change',()=>{if(range.value==='custom')return;const cutoff=range.value==='all'?-Infinity:Date.parse(points.at(-1).date)-(Number(range.value)-1)*86400000;view.set(points.findIndex(p=>Date.parse(p.date)>=cutoff),points.length-1);draw();});
+ for(const control of [style,averages,bands,volume])control?.addEventListener('change',draw);
+ function fullscreenState(){expanded=document.fullscreenElement===section||section.getAttribute?.('data-expanded')==='true';full.textContent=expanded?'Exit fullscreen':'Fullscreen';full.setAttribute('aria-pressed',String(expanded));}
+ full.addEventListener('click',()=>{expanded=!expanded;section.setAttribute('data-expanded',String(expanded));section.setAttribute('role',expanded?'dialog':'region');section.setAttribute('aria-modal',String(expanded));section.setAttribute('aria-label','Price history');fullscreenState();if(expanded)section.focus?.();else full.focus?.();});
+ section.addEventListener('fullscreenchange',fullscreenState);section.addEventListener('keydown',event=>{if(event.key==='Escape'&&expanded){if(expanded){section.setAttribute('data-expanded','false');section.setAttribute('aria-modal','false');section.setAttribute('role','region');expanded=false;fullscreenState();full.focus?.();}}else if(event.key==='Tab'&&expanded){const focusable=[...section.querySelectorAll('button:not(:disabled),select,input,summary,[tabindex="0"]')].filter(n=>n.getClientRects().length);const first=focusable[0],last=focusable.at(-1);if(event.shiftKey&&(document.activeElement===first||document.activeElement===section)){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}});
+ section.append(selected,navigation,plot,volumePlot,sliderLabel,help,status);
+ const tools=el('details');tools.className='chart-tools';tools.append(el('summary','Advanced chart tools and exact values'),controls,el('p','Blue: price · teal: MA7 · dashed orange: MA25 · dotted purple: bands. Candles show actual daily open/high/low/close; green closes at or above open and red below. Overlays use the original loaded history. Missing data is not filled.'),readout);
+ const tableDetails=el('details'),table=el('table'),head=el('tr');
+ table.append(el('caption',`${points.length} loaded observations · USD · oldest to newest. Zoom does not remove rows.`));
+ const headers=[options.sessions?'Exchange session':'UTC date',hasBars?'Close (USD)':'Price (USD)','Change from previous observation (%)',...(hasBars?['Open (USD)','High (USD)','Low (USD)','Volume (shares)']:[]),'MA7 (USD)','MA25 (USD)','Lower band (USD)','Middle band (USD)','Upper band (USD)'];
+ for(const text of headers){const th=el('th',text);th.setAttribute('scope','col');head.append(th);}table.append(head);
+ for(let index=0;index<points.length;index++){const p=points[index],row=el('tr'),b=hasBars?bars[index]:null;
+  const change=index?((p.price/points[index-1].price-1)*100):null;
+  const values=[p.date,p.price,change,...(b?[b.open,b.high,b.low,b.volume]:[]),p.ma_7,p.ma_25,p.bollinger_lower,p.bollinger_middle,p.bollinger_upper];
+  values.forEach(value=>row.append(el('td',value===null||value===undefined?'Unavailable':format(value))));table.append(row);
+ }
+ tableDetails.className='chart-table';tableDetails.append(el('summary','Chart data table'),el('p',`${hasBars?'Open/high/low/close and share volume come from the loaded daily provider bars. Prices are split-adjusted; volume is not dollar turnover.':'Prices are daily samples, not OHLC candles.'} Change compares consecutive available observations and may span a data gap. MA7 and MA25 average 7 and 25 observations. Bollinger Bands describe variation around the 20-observation average; they are not predicted prices. Unavailable means the value was not supplied or there is insufficient usable history. The first observation has no prior return. All rows retain the original analysis window.`),table);tools.append(tableDetails);section.append(tools);parent.append(section);draw();
 }

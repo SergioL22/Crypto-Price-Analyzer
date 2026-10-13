@@ -11,6 +11,10 @@ research_datasets.db
 research_datasets.db-journal
 research_datasets.db-wal
 research_datasets.db-shm
+prediction_journal.db
+prediction_journal.db-journal
+prediction_journal.db-wal
+prediction_journal.db-shm
 
 # Local runtime data and machine-specific files
 crypto_data.db

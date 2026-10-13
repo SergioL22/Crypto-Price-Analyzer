@@ -295,3 +295,14 @@ The shared navigation opens six independent pages: Market (`/`), Stocks & ETFs (
 ## Research datasets (Phase 3)
 
 Use `dataset_cli.py` to capture versioned crypto/stock/ETF snapshots and build reproducible, causal features with separate forward-return labels. Optional benchmark context and missing-session checks are included. See [the dataset operating guide](PHASE3_DATASETS.md) for commands, quality rules and historical-data limitations. Training and evaluation follow in Phase 4; no accuracy claims are generated here.
+# Current research milestone
+
+The stock/ETF workspace now includes interactive history navigation, optional genuine daily OHLC candlesticks, volume and explained Advanced tables. Phase 4 covers a fixed ten-asset universe, yearly baseline evaluation and an append-only manual prediction journal. The model has not passed the recommendation promotion gate.
+
+- [Phase 4 completion and operating instructions](PHASE4_COMPLETION.md)
+- [Every expanded asset/year result](PHASE4_EXPANDED_RESULTS.md)
+- [UI polish](UI_POLISH.md)
+- [Fresh-data issuance attempt](PROSPECTIVE_START.md)
+- [Hosted app and licensing plan](APP_RELEASE_PLAN.md)
+
+The hosted app is planned, not deployed. Current operation remains a single-user loopback-only local application. Earlier phase-specific sections describe the capabilities at those milestones.

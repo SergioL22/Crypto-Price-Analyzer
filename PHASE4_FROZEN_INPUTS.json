@@ -1,0 +1,953 @@
+{
+  "protocol": "PHASE4_NEXT_PROTOCOL.md",
+  "generated_at_utc": "2026-10-13T01:23:12.934294+00:00",
+  "mode": "live_capture",
+  "assets": [
+    {
+      "symbol": "MSFT",
+      "asset_class": "stock",
+      "status": "audited",
+      "asset": {
+        "asset_class": "stock",
+        "currency": "USD",
+        "exchange": "XNGS",
+        "id": "twelvedata:stock:XNGS:USD:MSFT",
+        "name": "Microsoft Corporation Common Stock",
+        "provider": "twelvedata",
+        "symbol": "MSFT",
+        "timezone": "America/New_York"
+      },
+      "snapshot_id": "634c72103efb384f123128325647e75fe7c0eb0f2c6b965f6d766badbf12d72a",
+      "feature_id": "79ef8a32ee64dc03d70d9dbd7368efea03769ecd0db47d943f106a6bd4fe1d34",
+      "captured_at_utc": "2026-10-13T01:23:12.934294+00:00",
+      "collection": {
+        "adapter_version": "twelvedata-daily-v1",
+        "calendar": "XNYS regular completed sessions",
+        "calendar_version": "4.13.2",
+        "requested_calendar_days": 3653
+      },
+      "expected_sessions": 2513,
+      "observations": 2512,
+      "observed_start": "2016-10-12",
+      "observed_end": "2026-10-09",
+      "missing_sessions": [
+        "2026-10-12"
+      ],
+      "unknown_volume": 0,
+      "supervised_rows": 2473,
+      "blocks": [
+        {
+          "year": 2021,
+          "partial": false,
+          "training_rows": 1024,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2021-01-04",
+          "last_target_session": "2021-12-31"
+        },
+        {
+          "year": 2022,
+          "partial": false,
+          "training_rows": 1276,
+          "completed_test_targets": 246,
+          "eligible": true,
+          "first_test_session": "2022-01-03",
+          "last_target_session": "2022-12-30"
+        },
+        {
+          "year": 2023,
+          "partial": false,
+          "training_rows": 1527,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2023-01-03",
+          "last_target_session": "2023-12-29"
+        },
+        {
+          "year": 2024,
+          "partial": false,
+          "training_rows": 1777,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2024-01-02",
+          "last_target_session": "2024-12-31"
+        },
+        {
+          "year": 2025,
+          "partial": false,
+          "training_rows": 2029,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2025-01-02",
+          "last_target_session": "2025-12-31"
+        },
+        {
+          "year": 2026,
+          "partial": true,
+          "training_rows": 2279,
+          "completed_test_targets": 189,
+          "eligible": true,
+          "first_test_session": "2026-01-02",
+          "last_target_session": "2026-10-09"
+        }
+      ],
+      "limitations": [
+        "Provider data may have been revised before capture; this is not a historical point-in-time archive.",
+        "No guaranteed delisted coverage or historical universe membership.",
+        "No dividend-inclusive total return or transaction costs."
+      ]
+    },
+    {
+      "symbol": "JNJ",
+      "asset_class": "stock",
+      "status": "audited",
+      "asset": {
+        "asset_class": "stock",
+        "currency": "USD",
+        "exchange": "XNYS",
+        "id": "twelvedata:stock:XNYS:USD:JNJ",
+        "name": "Johnson & Johnson",
+        "provider": "twelvedata",
+        "symbol": "JNJ",
+        "timezone": "America/New_York"
+      },
+      "snapshot_id": "f1db47fb7a37bb8be08be00f183d871efd94ffa62bcbb4dd6804bea736eb4519",
+      "feature_id": "eba7e39c3a49cb5fadf623371519e94959cfa5976e553d13727a4506f88de089",
+      "captured_at_utc": "2026-10-13T01:23:12.934294+00:00",
+      "collection": {
+        "adapter_version": "twelvedata-daily-v1",
+        "calendar": "XNYS regular completed sessions",
+        "calendar_version": "4.13.2",
+        "requested_calendar_days": 3653
+      },
+      "expected_sessions": 2513,
+      "observations": 2512,
+      "observed_start": "2016-10-12",
+      "observed_end": "2026-10-09",
+      "missing_sessions": [
+        "2026-10-12"
+      ],
+      "unknown_volume": 0,
+      "supervised_rows": 2473,
+      "blocks": [
+        {
+          "year": 2021,
+          "partial": false,
+          "training_rows": 1024,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2021-01-04",
+          "last_target_session": "2021-12-31"
+        },
+        {
+          "year": 2022,
+          "partial": false,
+          "training_rows": 1276,
+          "completed_test_targets": 246,
+          "eligible": true,
+          "first_test_session": "2022-01-03",
+          "last_target_session": "2022-12-30"
+        },
+        {
+          "year": 2023,
+          "partial": false,
+          "training_rows": 1527,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2023-01-03",
+          "last_target_session": "2023-12-29"
+        },
+        {
+          "year": 2024,
+          "partial": false,
+          "training_rows": 1777,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2024-01-02",
+          "last_target_session": "2024-12-31"
+        },
+        {
+          "year": 2025,
+          "partial": false,
+          "training_rows": 2029,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2025-01-02",
+          "last_target_session": "2025-12-31"
+        },
+        {
+          "year": 2026,
+          "partial": true,
+          "training_rows": 2279,
+          "completed_test_targets": 189,
+          "eligible": true,
+          "first_test_session": "2026-01-02",
+          "last_target_session": "2026-10-09"
+        }
+      ],
+      "limitations": [
+        "Provider data may have been revised before capture; this is not a historical point-in-time archive.",
+        "No guaranteed delisted coverage or historical universe membership.",
+        "No dividend-inclusive total return or transaction costs."
+      ]
+    },
+    {
+      "symbol": "JPM",
+      "asset_class": "stock",
+      "status": "audited",
+      "asset": {
+        "asset_class": "stock",
+        "currency": "USD",
+        "exchange": "XNYS",
+        "id": "twelvedata:stock:XNYS:USD:JPM",
+        "name": "JPMorgan Chase & Co.",
+        "provider": "twelvedata",
+        "symbol": "JPM",
+        "timezone": "America/New_York"
+      },
+      "snapshot_id": "716ea6849c262a02b03f0b724655ad4e24b5517c7f62906b1038f903e690d0f9",
+      "feature_id": "55330736306046d00fd72da19f116f7ebc728007bc2385923c50aa66d3f991ad",
+      "captured_at_utc": "2026-10-13T01:23:12.934294+00:00",
+      "collection": {
+        "adapter_version": "twelvedata-daily-v1",
+        "calendar": "XNYS regular completed sessions",
+        "calendar_version": "4.13.2",
+        "requested_calendar_days": 3653
+      },
+      "expected_sessions": 2513,
+      "observations": 2512,
+      "observed_start": "2016-10-12",
+      "observed_end": "2026-10-09",
+      "missing_sessions": [
+        "2026-10-12"
+      ],
+      "unknown_volume": 0,
+      "supervised_rows": 2473,
+      "blocks": [
+        {
+          "year": 2021,
+          "partial": false,
+          "training_rows": 1024,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2021-01-04",
+          "last_target_session": "2021-12-31"
+        },
+        {
+          "year": 2022,
+          "partial": false,
+          "training_rows": 1276,
+          "completed_test_targets": 246,
+          "eligible": true,
+          "first_test_session": "2022-01-03",
+          "last_target_session": "2022-12-30"
+        },
+        {
+          "year": 2023,
+          "partial": false,
+          "training_rows": 1527,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2023-01-03",
+          "last_target_session": "2023-12-29"
+        },
+        {
+          "year": 2024,
+          "partial": false,
+          "training_rows": 1777,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2024-01-02",
+          "last_target_session": "2024-12-31"
+        },
+        {
+          "year": 2025,
+          "partial": false,
+          "training_rows": 2029,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2025-01-02",
+          "last_target_session": "2025-12-31"
+        },
+        {
+          "year": 2026,
+          "partial": true,
+          "training_rows": 2279,
+          "completed_test_targets": 189,
+          "eligible": true,
+          "first_test_session": "2026-01-02",
+          "last_target_session": "2026-10-09"
+        }
+      ],
+      "limitations": [
+        "Provider data may have been revised before capture; this is not a historical point-in-time archive.",
+        "No guaranteed delisted coverage or historical universe membership.",
+        "No dividend-inclusive total return or transaction costs."
+      ]
+    },
+    {
+      "symbol": "XOM",
+      "asset_class": "stock",
+      "status": "audited",
+      "asset": {
+        "asset_class": "stock",
+        "currency": "USD",
+        "exchange": "XNYS",
+        "id": "twelvedata:stock:XNYS:USD:XOM",
+        "name": "ExxonMobil Holdings Corporation",
+        "provider": "twelvedata",
+        "symbol": "XOM",
+        "timezone": "America/New_York"
+      },
+      "snapshot_id": "dfecc06a19cfa17de2b8eea461c91a8c84b2a7bea1ad25c9299cd8f61b0b963c",
+      "feature_id": "99a613a26249acfc25c20d2dedb97a820c6e79103920307b35a3126ed36ddae1",
+      "captured_at_utc": "2026-10-13T01:23:12.934294+00:00",
+      "collection": {
+        "adapter_version": "twelvedata-daily-v1",
+        "calendar": "XNYS regular completed sessions",
+        "calendar_version": "4.13.2",
+        "requested_calendar_days": 3653
+      },
+      "expected_sessions": 2513,
+      "observations": 2512,
+      "observed_start": "2016-10-12",
+      "observed_end": "2026-10-09",
+      "missing_sessions": [
+        "2026-10-12"
+      ],
+      "unknown_volume": 0,
+      "supervised_rows": 2473,
+      "blocks": [
+        {
+          "year": 2021,
+          "partial": false,
+          "training_rows": 1024,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2021-01-04",
+          "last_target_session": "2021-12-31"
+        },
+        {
+          "year": 2022,
+          "partial": false,
+          "training_rows": 1276,
+          "completed_test_targets": 246,
+          "eligible": true,
+          "first_test_session": "2022-01-03",
+          "last_target_session": "2022-12-30"
+        },
+        {
+          "year": 2023,
+          "partial": false,
+          "training_rows": 1527,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2023-01-03",
+          "last_target_session": "2023-12-29"
+        },
+        {
+          "year": 2024,
+          "partial": false,
+          "training_rows": 1777,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2024-01-02",
+          "last_target_session": "2024-12-31"
+        },
+        {
+          "year": 2025,
+          "partial": false,
+          "training_rows": 2029,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2025-01-02",
+          "last_target_session": "2025-12-31"
+        },
+        {
+          "year": 2026,
+          "partial": true,
+          "training_rows": 2279,
+          "completed_test_targets": 189,
+          "eligible": true,
+          "first_test_session": "2026-01-02",
+          "last_target_session": "2026-10-09"
+        }
+      ],
+      "limitations": [
+        "Provider data may have been revised before capture; this is not a historical point-in-time archive.",
+        "No guaranteed delisted coverage or historical universe membership.",
+        "No dividend-inclusive total return or transaction costs."
+      ]
+    },
+    {
+      "symbol": "QQQ",
+      "asset_class": "etf",
+      "status": "audited",
+      "asset": {
+        "asset_class": "etf",
+        "currency": "USD",
+        "exchange": "XNMS",
+        "id": "twelvedata:etf:XNMS:USD:QQQ",
+        "name": "Invesco QQQ Trust, Series 1",
+        "provider": "twelvedata",
+        "symbol": "QQQ",
+        "timezone": "America/New_York"
+      },
+      "snapshot_id": "c22fe70493acf3f91846ee9d728aeac09737b3b4a5f70af94779b7880cef31ea",
+      "feature_id": "52700f40f12213f28af69d9168e5b775795b677aec478f64819c639bca1a2544",
+      "captured_at_utc": "2026-10-13T01:23:12.934294+00:00",
+      "collection": {
+        "adapter_version": "twelvedata-daily-v1",
+        "calendar": "XNYS regular completed sessions",
+        "calendar_version": "4.13.2",
+        "requested_calendar_days": 3653
+      },
+      "expected_sessions": 2513,
+      "observations": 2512,
+      "observed_start": "2016-10-12",
+      "observed_end": "2026-10-09",
+      "missing_sessions": [
+        "2026-10-12"
+      ],
+      "unknown_volume": 0,
+      "supervised_rows": 2473,
+      "blocks": [
+        {
+          "year": 2021,
+          "partial": false,
+          "training_rows": 1024,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2021-01-04",
+          "last_target_session": "2021-12-31"
+        },
+        {
+          "year": 2022,
+          "partial": false,
+          "training_rows": 1276,
+          "completed_test_targets": 246,
+          "eligible": true,
+          "first_test_session": "2022-01-03",
+          "last_target_session": "2022-12-30"
+        },
+        {
+          "year": 2023,
+          "partial": false,
+          "training_rows": 1527,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2023-01-03",
+          "last_target_session": "2023-12-29"
+        },
+        {
+          "year": 2024,
+          "partial": false,
+          "training_rows": 1777,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2024-01-02",
+          "last_target_session": "2024-12-31"
+        },
+        {
+          "year": 2025,
+          "partial": false,
+          "training_rows": 2029,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2025-01-02",
+          "last_target_session": "2025-12-31"
+        },
+        {
+          "year": 2026,
+          "partial": true,
+          "training_rows": 2279,
+          "completed_test_targets": 189,
+          "eligible": true,
+          "first_test_session": "2026-01-02",
+          "last_target_session": "2026-10-09"
+        }
+      ],
+      "limitations": [
+        "Provider data may have been revised before capture; this is not a historical point-in-time archive.",
+        "No guaranteed delisted coverage or historical universe membership.",
+        "No dividend-inclusive total return or transaction costs."
+      ]
+    },
+    {
+      "symbol": "IWM",
+      "asset_class": "etf",
+      "status": "audited",
+      "asset": {
+        "asset_class": "etf",
+        "currency": "USD",
+        "exchange": "ARCX",
+        "id": "twelvedata:etf:ARCX:USD:IWM",
+        "name": "iShares Russell 2000 ETF",
+        "provider": "twelvedata",
+        "symbol": "IWM",
+        "timezone": "America/New_York"
+      },
+      "snapshot_id": "741ec670b6a6ced24fbb15470a7a6ebfe7d853591e29fb8d0c240820909e4bb8",
+      "feature_id": "3862fd1aa522a64f5fb367e38298293fc104d11f0bc6c6cf2804e88bd8508926",
+      "captured_at_utc": "2026-10-13T01:23:12.934294+00:00",
+      "collection": {
+        "adapter_version": "twelvedata-daily-v1",
+        "calendar": "XNYS regular completed sessions",
+        "calendar_version": "4.13.2",
+        "requested_calendar_days": 3653
+      },
+      "expected_sessions": 2513,
+      "observations": 2512,
+      "observed_start": "2016-10-12",
+      "observed_end": "2026-10-09",
+      "missing_sessions": [
+        "2026-10-12"
+      ],
+      "unknown_volume": 0,
+      "supervised_rows": 2473,
+      "blocks": [
+        {
+          "year": 2021,
+          "partial": false,
+          "training_rows": 1024,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2021-01-04",
+          "last_target_session": "2021-12-31"
+        },
+        {
+          "year": 2022,
+          "partial": false,
+          "training_rows": 1276,
+          "completed_test_targets": 246,
+          "eligible": true,
+          "first_test_session": "2022-01-03",
+          "last_target_session": "2022-12-30"
+        },
+        {
+          "year": 2023,
+          "partial": false,
+          "training_rows": 1527,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2023-01-03",
+          "last_target_session": "2023-12-29"
+        },
+        {
+          "year": 2024,
+          "partial": false,
+          "training_rows": 1777,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2024-01-02",
+          "last_target_session": "2024-12-31"
+        },
+        {
+          "year": 2025,
+          "partial": false,
+          "training_rows": 2029,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2025-01-02",
+          "last_target_session": "2025-12-31"
+        },
+        {
+          "year": 2026,
+          "partial": true,
+          "training_rows": 2279,
+          "completed_test_targets": 189,
+          "eligible": true,
+          "first_test_session": "2026-01-02",
+          "last_target_session": "2026-10-09"
+        }
+      ],
+      "limitations": [
+        "Provider data may have been revised before capture; this is not a historical point-in-time archive.",
+        "No guaranteed delisted coverage or historical universe membership.",
+        "No dividend-inclusive total return or transaction costs."
+      ]
+    },
+    {
+      "symbol": "DIA",
+      "asset_class": "etf",
+      "status": "audited",
+      "asset": {
+        "asset_class": "etf",
+        "currency": "USD",
+        "exchange": "ARCX",
+        "id": "twelvedata:etf:ARCX:USD:DIA",
+        "name": "State Street SPDR Dow Jones Industrial Average ETF Trust",
+        "provider": "twelvedata",
+        "symbol": "DIA",
+        "timezone": "America/New_York"
+      },
+      "snapshot_id": "e8b1afc46bf668809a44d79ebf61a615a6cb8b9a53effa4e2c22242c095c2013",
+      "feature_id": "ab65d2f3e54857e599091b1c37b976a40e29964a99f8b24d86894022bf694070",
+      "captured_at_utc": "2026-10-13T01:23:12.934294+00:00",
+      "collection": {
+        "adapter_version": "twelvedata-daily-v1",
+        "calendar": "XNYS regular completed sessions",
+        "calendar_version": "4.13.2",
+        "requested_calendar_days": 3653
+      },
+      "expected_sessions": 2513,
+      "observations": 2512,
+      "observed_start": "2016-10-12",
+      "observed_end": "2026-10-09",
+      "missing_sessions": [
+        "2026-10-12"
+      ],
+      "unknown_volume": 0,
+      "supervised_rows": 2473,
+      "blocks": [
+        {
+          "year": 2021,
+          "partial": false,
+          "training_rows": 1024,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2021-01-04",
+          "last_target_session": "2021-12-31"
+        },
+        {
+          "year": 2022,
+          "partial": false,
+          "training_rows": 1276,
+          "completed_test_targets": 246,
+          "eligible": true,
+          "first_test_session": "2022-01-03",
+          "last_target_session": "2022-12-30"
+        },
+        {
+          "year": 2023,
+          "partial": false,
+          "training_rows": 1527,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2023-01-03",
+          "last_target_session": "2023-12-29"
+        },
+        {
+          "year": 2024,
+          "partial": false,
+          "training_rows": 1777,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2024-01-02",
+          "last_target_session": "2024-12-31"
+        },
+        {
+          "year": 2025,
+          "partial": false,
+          "training_rows": 2029,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2025-01-02",
+          "last_target_session": "2025-12-31"
+        },
+        {
+          "year": 2026,
+          "partial": true,
+          "training_rows": 2279,
+          "completed_test_targets": 189,
+          "eligible": true,
+          "first_test_session": "2026-01-02",
+          "last_target_session": "2026-10-09"
+        }
+      ],
+      "limitations": [
+        "Provider data may have been revised before capture; this is not a historical point-in-time archive.",
+        "No guaranteed delisted coverage or historical universe membership.",
+        "No dividend-inclusive total return or transaction costs."
+      ]
+    },
+    {
+      "symbol": "AAPL",
+      "asset_class": "stock",
+      "status": "audited",
+      "asset": {
+        "asset_class": "stock",
+        "currency": "USD",
+        "exchange": "XNGS",
+        "id": "twelvedata:stock:XNGS:USD:AAPL",
+        "name": "Apple Inc.",
+        "provider": "twelvedata",
+        "symbol": "AAPL",
+        "timezone": "America/New_York"
+      },
+      "snapshot_id": "9df19a43c9adb0c4ce35c8767bde6a31bd908ef36f4e9a3e156fec5c5cc82329",
+      "feature_id": "b7cd056e08ca221367bdbd4edc1b683b393910eebfd36f777c2890cc39fcd25e",
+      "captured_at_utc": "2026-10-13T01:23:12.934294+00:00",
+      "collection": {
+        "adapter_version": "twelvedata-daily-v1",
+        "calendar": "XNYS regular completed sessions",
+        "calendar_version": "4.13.2",
+        "requested_calendar_days": 3653
+      },
+      "expected_sessions": 2513,
+      "observations": 2512,
+      "observed_start": "2016-10-12",
+      "observed_end": "2026-10-09",
+      "missing_sessions": [
+        "2026-10-12"
+      ],
+      "unknown_volume": 0,
+      "supervised_rows": 2473,
+      "blocks": [
+        {
+          "year": 2021,
+          "partial": false,
+          "training_rows": 1024,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2021-01-04",
+          "last_target_session": "2021-12-31"
+        },
+        {
+          "year": 2022,
+          "partial": false,
+          "training_rows": 1276,
+          "completed_test_targets": 246,
+          "eligible": true,
+          "first_test_session": "2022-01-03",
+          "last_target_session": "2022-12-30"
+        },
+        {
+          "year": 2023,
+          "partial": false,
+          "training_rows": 1527,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2023-01-03",
+          "last_target_session": "2023-12-29"
+        },
+        {
+          "year": 2024,
+          "partial": false,
+          "training_rows": 1777,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2024-01-02",
+          "last_target_session": "2024-12-31"
+        },
+        {
+          "year": 2025,
+          "partial": false,
+          "training_rows": 2029,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2025-01-02",
+          "last_target_session": "2025-12-31"
+        },
+        {
+          "year": 2026,
+          "partial": true,
+          "training_rows": 2279,
+          "completed_test_targets": 189,
+          "eligible": true,
+          "first_test_session": "2026-01-02",
+          "last_target_session": "2026-10-09"
+        }
+      ],
+      "limitations": [
+        "Provider data may have been revised before capture; this is not a historical point-in-time archive.",
+        "No guaranteed delisted coverage or historical universe membership.",
+        "No dividend-inclusive total return or transaction costs."
+      ]
+    },
+    {
+      "symbol": "IBM",
+      "asset_class": "stock",
+      "status": "audited",
+      "asset": {
+        "asset_class": "stock",
+        "currency": "USD",
+        "exchange": "XNYS",
+        "id": "twelvedata:stock:XNYS:USD:IBM",
+        "name": "International Business Machines Corporation",
+        "provider": "twelvedata",
+        "symbol": "IBM",
+        "timezone": "America/New_York"
+      },
+      "snapshot_id": "8040a62e07258e61f85687ec94148e66f7d5d55d4f37c719b5b504d2d798cdd4",
+      "feature_id": "059bb849aa50612433a5749ada56c4dd39070f54526108be6d80f0fd35976626",
+      "captured_at_utc": "2026-10-13T01:23:12.934294+00:00",
+      "collection": {
+        "adapter_version": "twelvedata-daily-v1",
+        "calendar": "XNYS regular completed sessions",
+        "calendar_version": "4.13.2",
+        "requested_calendar_days": 3653
+      },
+      "expected_sessions": 2513,
+      "observations": 2512,
+      "observed_start": "2016-10-12",
+      "observed_end": "2026-10-09",
+      "missing_sessions": [
+        "2026-10-12"
+      ],
+      "unknown_volume": 0,
+      "supervised_rows": 2473,
+      "blocks": [
+        {
+          "year": 2021,
+          "partial": false,
+          "training_rows": 1024,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2021-01-04",
+          "last_target_session": "2021-12-31"
+        },
+        {
+          "year": 2022,
+          "partial": false,
+          "training_rows": 1276,
+          "completed_test_targets": 246,
+          "eligible": true,
+          "first_test_session": "2022-01-03",
+          "last_target_session": "2022-12-30"
+        },
+        {
+          "year": 2023,
+          "partial": false,
+          "training_rows": 1527,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2023-01-03",
+          "last_target_session": "2023-12-29"
+        },
+        {
+          "year": 2024,
+          "partial": false,
+          "training_rows": 1777,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2024-01-02",
+          "last_target_session": "2024-12-31"
+        },
+        {
+          "year": 2025,
+          "partial": false,
+          "training_rows": 2029,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2025-01-02",
+          "last_target_session": "2025-12-31"
+        },
+        {
+          "year": 2026,
+          "partial": true,
+          "training_rows": 2279,
+          "completed_test_targets": 189,
+          "eligible": true,
+          "first_test_session": "2026-01-02",
+          "last_target_session": "2026-10-09"
+        }
+      ],
+      "limitations": [
+        "Provider data may have been revised before capture; this is not a historical point-in-time archive.",
+        "No guaranteed delisted coverage or historical universe membership.",
+        "No dividend-inclusive total return or transaction costs."
+      ]
+    },
+    {
+      "symbol": "SPY",
+      "asset_class": "etf",
+      "status": "audited",
+      "asset": {
+        "asset_class": "etf",
+        "currency": "USD",
+        "exchange": "ARCX",
+        "id": "twelvedata:etf:ARCX:USD:SPY",
+        "name": "State Street SPDR S&P 500 ETF Trust",
+        "provider": "twelvedata",
+        "symbol": "SPY",
+        "timezone": "America/New_York"
+      },
+      "snapshot_id": "4d57768b5379656ba09690bac36a1e9b898d11e186217b2c086e26657e2b70b7",
+      "feature_id": "d9d1a97b4073cb14f9941a0bda977b8b6b07e17da25baaa69e348192fa2e158d",
+      "captured_at_utc": "2026-10-13T01:23:12.934294+00:00",
+      "collection": {
+        "adapter_version": "twelvedata-daily-v1",
+        "calendar": "XNYS regular completed sessions",
+        "calendar_version": "4.13.2",
+        "requested_calendar_days": 3653
+      },
+      "expected_sessions": 2513,
+      "observations": 2512,
+      "observed_start": "2016-10-12",
+      "observed_end": "2026-10-09",
+      "missing_sessions": [
+        "2026-10-12"
+      ],
+      "unknown_volume": 0,
+      "supervised_rows": 2473,
+      "blocks": [
+        {
+          "year": 2021,
+          "partial": false,
+          "training_rows": 1024,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2021-01-04",
+          "last_target_session": "2021-12-31"
+        },
+        {
+          "year": 2022,
+          "partial": false,
+          "training_rows": 1276,
+          "completed_test_targets": 246,
+          "eligible": true,
+          "first_test_session": "2022-01-03",
+          "last_target_session": "2022-12-30"
+        },
+        {
+          "year": 2023,
+          "partial": false,
+          "training_rows": 1527,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2023-01-03",
+          "last_target_session": "2023-12-29"
+        },
+        {
+          "year": 2024,
+          "partial": false,
+          "training_rows": 1777,
+          "completed_test_targets": 247,
+          "eligible": true,
+          "first_test_session": "2024-01-02",
+          "last_target_session": "2024-12-31"
+        },
+        {
+          "year": 2025,
+          "partial": false,
+          "training_rows": 2029,
+          "completed_test_targets": 245,
+          "eligible": true,
+          "first_test_session": "2025-01-02",
+          "last_target_session": "2025-12-31"
+        },
+        {
+          "year": 2026,
+          "partial": true,
+          "training_rows": 2279,
+          "completed_test_targets": 189,
+          "eligible": true,
+          "first_test_session": "2026-01-02",
+          "last_target_session": "2026-10-09"
+        }
+      ],
+      "limitations": [
+        "Provider data may have been revised before capture; this is not a historical point-in-time archive.",
+        "No guaranteed delisted coverage or historical universe membership.",
+        "No dividend-inclusive total return or transaction costs."
+      ]
+    }
+  ],
+  "limitations": [
+    "Selected current listings have survivorship and selection bias.",
+    "Coverage eligibility is not evidence of predictive accuracy.",
+    "No models fitted; no accuracy or calibrated probabilities produced."
+  ],
+  "all_assets_audited": true
+}

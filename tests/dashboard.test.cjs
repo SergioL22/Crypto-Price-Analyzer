@@ -70,6 +70,22 @@ test('stock research ignores a response after changing the selected listing',asy
  assert.equal(s.elements['stock-results'].textContent,'');
 });
 
+test('stock loading state recovers after errors without repeating a request',async()=>{
+ const s=setup();const catalog=s.elements['stock-load'].listeners.click();
+ assert.equal(s.elements['stock-load']['aria-busy'],'true');
+ s.answer(0,{},503);await catalog;
+ assert.equal(s.elements['stock-load']['aria-busy'],'false');
+ assert.equal(s.elements['stock-load'].disabled,false);
+ s.elements['stock-options'].value='twelvedata:stock:XNYS:USD:ABC';
+ const pending=s.elements['stock-form'].listeners.submit({preventDefault(){}});
+ assert.equal(s.elements['stock-results']['aria-busy'],'true');
+ assert.equal(s.elements['stock-run'].textContent,'Loading analysis…');
+ s.answer(1,{},503);await pending;
+ assert.equal(s.elements['stock-results']['aria-busy'],'false');
+ assert.equal(s.elements['stock-run'].textContent,'View analysis');
+ assert.equal(s.requests.length,2);
+});
+
 test('stock dropdown includes more than 200 names, sorts, and filters without requests',async()=>{
  const s=setup(); const pending=s.elements['stock-load'].listeners.click();
  const assets=Array.from({length:350},(_,i)=>({id:`asset-${i}`,name:`Company ${String(i).padStart(3,'0')}`,symbol:`T${i}`,exchange:'XNYS',currency:'USD'})).reverse();
@@ -394,6 +410,7 @@ for (const page of ['index','stocks','crypto','watchlist','portfolio','backups',
 }
 
 test('chart starts with price only and keeps raw values inside collapsed tools',async()=>{const s=setup();const p=s.analyze();s.answer(0,{...evidence(100),history:chartPoints()});await p;const nodes=descendants(s.elements.analysis);assert.equal(nodes.filter(n=>n.tag==='path').length,1);const tools=nodes.find(n=>n.className==='chart-tools');assert.ok(tools);assert.ok(!tools.open);assert.ok(!descendants(tools).some(n=>n.type==='range'));assert.ok(nodes.some(n=>n.type==='range'));});
+require('./charts.test.cjs');
 require('./equities.test.cjs');
 require('./workspace.test.cjs');
 test('chart navigation clamps endpoints and zoom does not fetch new data',async()=>{

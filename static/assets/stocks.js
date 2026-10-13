@@ -13,7 +13,7 @@
  });
  document.addEventListener?.("keydown", event => { if (event.key === "Escape" && filterPanel && !filterPanel.hidden) { filterPanel.hidden = true; filterToggle._filterOpen = false; filterToggle.setAttribute("aria-expanded", "false"); filterToggle.focus?.(); } });
  if(requested?.startsWith("twelvedata:etf:")) kind.value="etf";
- function invalidate() { revision++; result.replaceChildren(); status.textContent = "Selection changed. Run research to see this listing’s data."; }
+ function invalidate() { revision++; result.replaceChildren(); if($("stock-empty"))$("stock-empty").hidden=false; status.textContent = "Choose your listing and time range, then view its analysis."; }
  function filter() {
   const previous = select.value, term = search.value.trim().toLowerCase();
   const matched = assets.filter(a => `${a.symbol} ${a.name} ${a.exchange}`.toLowerCase().includes(term) && (!$("stock-exchange")?.value || a.exchange === $("stock-exchange").value));
@@ -24,6 +24,7 @@
   select.value = matched.some(a => a.id === previous) ? previous : "";
   $("stock-matches").textContent = assets.length ? `${matched.length} of ${assets.length} supported listings. All matches are available in the dropdown, sorted by name.` : "Load the company / fund list to browse by name.";
   run.disabled = busy || !select.value;
+  if($("equity-save"))$("equity-save").disabled=busy||!select.value;
  }
  kind.addEventListener("change", () => { assets = []; invalidate(); filter(); });
  $("stock-exchange")?.addEventListener("change", () => { invalidate(); filter(); });
@@ -35,11 +36,11 @@
   invalidate();
  });
  search.addEventListener("input", () => { invalidate(); filter(); });
- select.addEventListener("change", () => { invalidate(); run.disabled = busy || !select.value; }); days.addEventListener("input", invalidate);
+ select.addEventListener("change", () => { invalidate(); run.disabled = busy || !select.value;if($("equity-save"))$("equity-save").disabled=busy||!select.value; }); days.addEventListener("input", invalidate);
  load.addEventListener("click", async () => {
   if (busy) return;
   invalidate(); const current = revision; busy = true; load.disabled = true; run.disabled = true;
-  status.textContent = "Loading supported listings…";
+  load.textContent="Loading listings…";load.setAttribute("aria-busy","true");status.textContent = "Loading supported listings…";
   try {
    const data = await request(`/v1/assets?asset_class=${encodeURIComponent(kind.value)}`);
    if (current !== revision) return;
@@ -47,11 +48,11 @@
    if(requested && assets.some(a=>a.id===requested) && !search.value && !$("stock-exchange")?.value) select.value=requested;
    status.textContent = `${assets.length} listings loaded${data.stale ? " from an older cached catalog" : ""}. Availability depends on your provider account.`;
   } catch (error) { if (current === revision) status.textContent = error.message; }
-  finally { busy = false; load.disabled = false; filter(); }
+  finally { busy = false; load.disabled = false;load.textContent="Load listings";load.setAttribute("aria-busy","false"); filter(); }
  });
  $("stock-form").addEventListener("submit", async event => {
   event.preventDefault(); if (busy || !select.value || !$("stock-form").reportValidity()) return;
-  const current = ++revision; busy = true; load.disabled = true; run.disabled = true; result.replaceChildren(); status.textContent = "Loading completed trading sessions…";
+  const current = ++revision; busy = true; load.disabled = true; run.disabled = true;run.textContent="Loading analysis…";result.setAttribute("aria-busy","true"); result.replaceChildren(); status.textContent = "Loading completed trading sessions…";
   try {
    const data = await request(`/v1/stock-analysis?asset_id=${encodeURIComponent(select.value)}&days=${encodeURIComponent(days.value)}`);
    if (current !== revision) return;
@@ -65,10 +66,11 @@
     price.className="price-hero";
     const priceValue=el("p",priceLabel(last.price));priceValue.className="price-value";
     price.append(el("h3","Latest available close"),priceValue,el("p",`${last.date} · USD · historical close`));
-    change.append(el("h3","Price change in returned history"),el("p",`${((last.price/first.price-1)*100).toFixed(2)}% · ${first.date} to ${last.date}. Excludes dividends.`));
+    const percent=(last.price/first.price-1)*100,returnValue=el("p",`${percent>0?'+':''}${percent.toFixed(2)}%`);returnValue.className=`return-value ${percent>0?'return-positive':percent<0?'return-negative':'return-flat'}`;
+    change.append(el("h3","Price change in returned history"),returnValue,el("p",`${first.date} to ${last.date} · excludes dividends`));
     cards.append(price,change);result.append(cards);
    }
-   priceChart(result, data.history, {sessions: true});
+   priceChart(result, data.history, {sessions: true, bars: data.bars});
    if (data.indicators) {
     const i = data.indicators;
     const signals = el("div"); signals.className = "signal-cards";
@@ -84,8 +86,11 @@
      ? `MACD is ${i.macd_histogram > 0 ? "above" : i.macd_histogram < 0 ? "below" : "at"} its signal line. This compares two smoothed price trends; it is not a buy or sell instruction.`
      : "MACD is unavailable for this window.");
     result.append(el("h3", "What the signals mean"), signals);
-    const details = el("details"), table = el("table"); details.append(el("summary", "Exact indicator values"));
-    for (const [key, value] of Object.entries(i)) { const row = el("tr"); row.append(el("th", key.replaceAll("_", " ")), el("td", format(value))); table.append(row); }
+    const details = el("details"), table = el("table"); details.className="chart-table";details.append(el("summary", "Exact indicator values"));
+    table.className="indicator-table";table.append(el("caption", `Latest loaded session: ${data.history.at(-1)?.date || "Unavailable"}. Calculated over the original history; zoom does not recalculate these values.`));
+    const head=el("tr");for(const text of ["Indicator","Value","Meaning / units"]){const th=el("th",text);th.setAttribute("scope","col");head.append(th);}table.append(head);
+    const descriptions={rsi_14:["RSI (14)","Wilder-smoothed momentum on a 0–100 scale. Conventional thresholds: 30 and 70; neither guarantees a reversal."],ma_7:["Moving average (7)","Mean close over 7 trading observations, in USD."],ma_25:["Moving average (25)","Mean close over 25 trading observations, in USD."],macd:["MACD","12-observation EMA minus 26-observation EMA, in USD."],macd_signal:["MACD signal","9-observation EMA of MACD, in USD."],macd_histogram:["MACD histogram","MACD minus its signal line, in USD; not a probability."],bollinger_lower:["Bollinger lower","20-observation average minus two standard deviations, in USD."],bollinger_middle:["Bollinger middle","20-observation average close, in USD."],bollinger_upper:["Bollinger upper","20-observation average plus two standard deviations, in USD."]};
+    for (const [key, value] of Object.entries(i)) { const row = el("tr"),[label,meaning]=descriptions[key]||[key.replaceAll("_", " "),"Provider / analysis value"];const th=el("th",label);th.setAttribute("scope","row");row.append(th, el("td", value===null?"Unavailable":format(value)),el("td",meaning)); table.append(row); }
     details.append(table); result.append(details);
    } else result.append(el("p", "Indicators unavailable: at least 35 observations and complete session coverage are required. Try a longer window or retry later if the latest bar is delayed."));
    if (data.history.length) notes.append(el("p", `Returned history: ${data.history[0].date} to ${data.history.at(-1).date}. The first returned date is not a verified listing date.`));
@@ -95,9 +100,10 @@
    }
    for (const text of data.limitations) notes.append(el("p", text));
    result.append(notes);
-   status.textContent = "Stock research loaded. No OpenAI request was made.";
+   if($("stock-empty"))$("stock-empty").hidden=true;
+   status.textContent = `Analysis ready · latest available close ${data.history.at(-1)?.date || "unavailable"}. Historical prices, not a live quote.`;
   } catch (error) { if (current === revision) status.textContent = error.message; }
-  finally { busy = false; load.disabled = false; filter(); }
+  finally { busy = false; load.disabled = false;run.textContent="View analysis";result.setAttribute("aria-busy","false"); filter(); }
  });
  filter();
 })();
