@@ -3,7 +3,7 @@ from pathlib import Path
 import secrets
 import ipaddress
 from urllib.parse import urlsplit
-from fastapi import FastAPI,Request
+from fastapi import FastAPI,Request,Query
 from fastapi.responses import JSONResponse,FileResponse,RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
@@ -12,13 +12,19 @@ from starlette.concurrency import run_in_threadpool
 from account_settings import AccountSettings
 from account_store import AccountStore,AccountError
 from account_models import Workspace,WorkspaceUpdate,ImportConfirm,DemoLogin
+from backend_service import BackendError
+from stock_provider import StockDataError
+from api import UpstreamError
 
 ROOT=Path(__file__).parent
 
 
-def create_app(settings=None,store=None,identity=None):
+def create_app(settings=None,store=None,identity=None,research=None):
     settings=settings or AccountSettings.from_environment()
     store=store or AccountStore(settings.database_url)
+    from account_research import Research,DisabledResearch
+    research=research or (Research() if settings.demo else DisabledResearch())
+    if not settings.demo and research.mode=='local-live':raise ValueError('Private live provider adapter is loopback-only')
     if not settings.demo and identity is None:
         from account_auth import ManagedOIDC
         identity=ManagedOIDC(settings)
@@ -31,6 +37,11 @@ def create_app(settings=None,store=None,identity=None):
     @app.exception_handler(AccountError)
     async def account_error(request,error):
         messages={'sign_in_required':'Sign in to access your workspace.','workspace_changed':'Your workspace changed. Reload it and review your changes.',
+                  'market_not_enabled':'Market data is not enabled for this deployment.',
+                  'history_unavailable':'No completed historical observations are available.',
+                  'crypto_window':'Crypto history supports up to 364 completed days.',
+                  'asset_mismatch':'Choose an asset from the selected market.',
+                  'asset_unavailable':'Choose an available asset from the market list.',
                   'preview_unavailable':'This preview expired or is unavailable. Preview the import again.',
                   'rate_limited':'Too many requests. Wait a minute and try again.'}
         return JSONResponse(status_code=error.status,content={'error':{'code':error.code,'message':messages.get(error.code,'The request could not be authorized.')}},
@@ -39,6 +50,15 @@ def create_app(settings=None,store=None,identity=None):
     @app.exception_handler(RequestValidationError)
     async def invalid(request,error):
         return JSONResponse(status_code=422,content={'error':{'code':'invalid_request','message':'Fields do not match the account workspace format.'}})
+
+    @app.exception_handler(BackendError)
+    async def capacity_error(request,error):return JSONResponse(status_code=error.status,content={'error':{'code':error.code,'message':'Research is busy. Try again later.'}})
+
+    @app.exception_handler(StockDataError)
+    async def stock_error(request,error):return JSONResponse(status_code=503,content={'error':{'code':error.code,'message':'Stock data is unavailable. Check provider setup or quota, then retry manually.'}})
+
+    @app.exception_handler(UpstreamError)
+    async def crypto_error(request,error):return JSONResponse(status_code=503,content={'error':{'code':'crypto_unavailable','message':'Crypto history is unavailable. Retry manually later.'}})
 
     @app.middleware('http')
     async def boundary(request,call_next):
@@ -86,7 +106,7 @@ def create_app(settings=None,store=None,identity=None):
     def health():return {'status':'ok','mode':'sample-staging' if settings.demo else 'accounts'}
 
     @app.get('/v2/config')
-    def config():return {'demo':settings.demo,'market_data':'sample' if settings.demo else 'not_enabled','sign_in_url':None if settings.demo else '/auth/login'}
+    def config():return {'demo':settings.demo,'market_data':research.mode,'sign_in_url':None if settings.demo else '/auth/login'}
 
     @app.get('/auth/login')
     async def login(request:Request):
@@ -133,7 +153,9 @@ def create_app(settings=None,store=None,identity=None):
         store.logout(authenticated(request,True));response=JSONResponse({'signed_out':True});response.delete_cookie(cookie,path='/');return response
 
     @app.get('/v2/workspace')
-    def workspace(request:Request):return store.read(authenticated(request)['owner'])
+    def workspace(request:Request):
+        session=authenticated(request)
+        return dict(store.read(session['owner']),account_id=session['owner'])
 
     @app.put('/v2/workspace')
     def save_workspace(body:WorkspaceUpdate,request:Request):
@@ -156,6 +178,16 @@ def create_app(settings=None,store=None,identity=None):
         payload=store.read(authenticated(request)['owner'])['workspace']
         return JSONResponse(payload,headers={'Content-Disposition':'attachment; filename="account-workspace.json"'})
 
+    @app.get('/v2/research/assets')
+    def research_assets(request:Request,kind:str=Query(pattern='^(stock|etf|crypto)$')):
+        session=authenticated(request);store.throttle('catalog:'+session['owner'],6)
+        return research.catalog(kind)
+
+    @app.get('/v2/research/analysis')
+    def research_analysis(request:Request,kind:str=Query(pattern='^(stock|etf|crypto)$'),asset_id:str=Query(min_length=1,max_length=160),days:int=Query(ge=35,le=3660)):
+        session=authenticated(request);store.throttle('research:'+session['owner'],6)
+        return research.analyze(kind,asset_id,days)
+
     @app.get('/')
     def home():return FileResponse(ROOT/'static'/'account.html')
 
@@ -164,3 +196,10 @@ def create_app(settings=None,store=None,identity=None):
 
 
 def create_staging_app():return create_app(AccountSettings.staging())
+
+
+def create_local_research_app():
+    from local_config import load_local_config
+    from account_research import Research
+    load_local_config()
+    return create_app(AccountSettings.staging(),research=Research(sample=False))

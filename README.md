@@ -309,4 +309,6 @@ The hosted app is planned, not deployed. Current operation remains a single-user
 
 ## Phase 5 account staging
 
+The account workspace now includes explicit stock/ETF and crypto research, shared interactive charts and selected-stock watchlist saving. See [the product research completion guide](PRODUCT_RESEARCH_COMPLETION.md) for synthetic staging, private live research, the prospective prediction batch and verification limits.
+
 A separate account factory adds managed OIDC integration, per-user server storage, revision-safe edits, explicit import previews and account exports. Try the loopback-only sample profiles using the [Phase 5 guide](PHASE5_COMPLETION.md). The original local research app remains on its own factory. Real hosted identity/database setup and market-display licensing are pending; the sample profiles must not be publicly exposed.

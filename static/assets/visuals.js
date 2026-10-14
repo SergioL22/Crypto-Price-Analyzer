@@ -116,10 +116,13 @@ function priceChart(parent, points, options = {}) {
  table.append(el('caption',`${points.length} loaded observations · USD · oldest to newest. Zoom does not remove rows.`));
  const headers=[options.sessions?'Exchange session':'UTC date',hasBars?'Close (USD)':'Price (USD)','Change from previous observation (%)',...(hasBars?['Open (USD)','High (USD)','Low (USD)','Volume (shares)']:[]),'MA7 (USD)','MA25 (USD)','Lower band (USD)','Middle band (USD)','Upper band (USD)'];
  for(const text of headers){const th=el('th',text);th.setAttribute('scope','col');head.append(th);}table.append(head);
+ let tableBuilt=false;
+ tableDetails.addEventListener('toggle',()=>{if(!tableDetails.open||tableBuilt)return;tableBuilt=true;
  for(let index=0;index<points.length;index++){const p=points[index],row=el('tr'),b=hasBars?bars[index]:null;
   const change=index?((p.price/points[index-1].price-1)*100):null;
   const values=[p.date,p.price,change,...(b?[b.open,b.high,b.low,b.volume]:[]),p.ma_7,p.ma_25,p.bollinger_lower,p.bollinger_middle,p.bollinger_upper];
   values.forEach(value=>row.append(el('td',value===null||value===undefined?'Unavailable':format(value))));table.append(row);
  }
+ });
  tableDetails.className='chart-table';tableDetails.append(el('summary','Chart data table'),el('p',`${hasBars?'Open/high/low/close and share volume come from the loaded daily provider bars. Prices are split-adjusted; volume is not dollar turnover.':'Prices are daily samples, not OHLC candles.'} Change compares consecutive available observations and may span a data gap. MA7 and MA25 average 7 and 25 observations. Bollinger Bands describe variation around the 20-observation average; they are not predicted prices. Unavailable means the value was not supplied or there is insufficient usable history. The first observation has no prior return. All rows retain the original analysis window.`),table);tools.append(tableDetails);section.append(tools);parent.append(section);draw();
 }

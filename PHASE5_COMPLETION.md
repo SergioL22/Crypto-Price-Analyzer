@@ -1,5 +1,7 @@
 # Phase 5 account foundation and private staging
 
+Follow-up: the account app now supports synthetic research, plus a separate explicit private live research factory. See [Product research completion](PRODUCT_RESEARCH_COMPLETION.md) for current operation. The account-security foundation and the hosted-setup limitations below still apply.
+
 Phase 5's account implementation and local staging checks are complete. A separate account application now supports managed sign-in integration, per-user workspace storage, revision-safe edits, explicit migration previews and account backups. The original local research app remains separate. A real identity tenant, managed PostgreSQL service, domain and hosted deployment have not been provisioned or tested; this is not a public-release approval.
 
 ## Try the private sample staging app

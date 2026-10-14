@@ -412,6 +412,7 @@ for (const page of ['index','stocks','crypto','watchlist','portfolio','backups',
 test('chart starts with price only and keeps raw values inside collapsed tools',async()=>{const s=setup();const p=s.analyze();s.answer(0,{...evidence(100),history:chartPoints()});await p;const nodes=descendants(s.elements.analysis);assert.equal(nodes.filter(n=>n.tag==='path').length,1);const tools=nodes.find(n=>n.className==='chart-tools');assert.ok(tools);assert.ok(!tools.open);assert.ok(!descendants(tools).some(n=>n.type==='range'));assert.ok(nodes.some(n=>n.type==='range'));});
 require('./charts.test.cjs');
 require('./account.test.cjs');
+require('./account-research.test.cjs');
 require('./equities.test.cjs');
 require('./workspace.test.cjs');
 test('chart navigation clamps endpoints and zoom does not fetch new data',async()=>{

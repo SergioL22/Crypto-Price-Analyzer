@@ -18,3 +18,9 @@ Fresh provider captures were requested for the ten predefined assets. Every retu
 | SPY | 2026-10-09 | 2026-10-12 | withheld | `f3adb2f56a3ddd0e56fa5839b75931209006d2946223398dc8e0db0e0292054e` |
 
 Actual journal: zero predictions, zero completed outcomes. After fresh complete data are available, issue predictions manually using `phase4_cli.py`; settle only after their five target sessions close. No automatic collector or reminder was created.
+
+## Successful retry — October 13, 2026
+
+The retry started at 2026-10-13T17:56:08.070240+00:00. All ten assets above returned complete fresh coverage through October 12, and all ten predictions were successfully appended to the prospective journal. Their five target sessions are October 13, 14, 15, 16 and 19.
+
+The current journal therefore contains **10 predictions, 0 completed outcomes and 10 pending**. The previous zero count describes the earlier withheld attempt. Settlement must wait until the October 19 session closes and complete outcome history is available. No accuracy percentage, calibration or recommendation promotion is claimed. The immutable source captures and prediction events remain in the ignored local research/journal databases.
