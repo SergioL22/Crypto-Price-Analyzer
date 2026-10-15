@@ -2,7 +2,7 @@
 (() => {
  const $=id=>document.getElementById(id),node=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
  let config=null,account=null,state=null,preview=null,busy=false,epoch=0,importVersion=0;
- const announce=signedIn=>document.dispatchEvent?.(new CustomEvent('account-session',{detail:{signedIn,mode:config?.market_data||'not_enabled'}}));
+ const announce=signedIn=>document.dispatchEvent?.(new CustomEvent('account-session',{detail:{signedIn,mode:config?.market_data||'not_enabled',csrf:account?.csrf_token}}));
  function say(text){$('status').textContent=text;}
  function clearPreview(){preview=null;$('import-preview').replaceChildren();$('import-preview').hidden=true;$('confirm-import').checked=false;$('apply').disabled=true;}
  function signedOut(){epoch++;importVersion++;account=null;state=null;announce(false);clearPreview();$('signedin').hidden=true;$('signin').hidden=false;$('account-name').textContent='';$('revision').textContent='';for(const id of ['listings','holdings','alerts','counts','holding-asset','alert-asset'])$(id).replaceChildren();for(const id of ['quantity','threshold','import-file'])$(id).value='';$('cost').value='0';}

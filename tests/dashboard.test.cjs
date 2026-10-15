@@ -413,6 +413,7 @@ test('chart starts with price only and keeps raw values inside collapsed tools',
 require('./charts.test.cjs');
 require('./account.test.cjs');
 require('./account-research.test.cjs');
+require('./account-assessment.test.cjs');
 require('./equities.test.cjs');
 require('./workspace.test.cjs');
 test('chart navigation clamps endpoints and zoom does not fetch new data',async()=>{

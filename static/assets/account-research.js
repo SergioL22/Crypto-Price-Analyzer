@@ -3,7 +3,7 @@
  const find=id=>document.getElementById(id);if(!find('research-panel'))return;
  let assets=[],revision=0,busy=false,signedIn=false,mode='sample';
  const picker=find('research-asset'),kind=find('research-kind'),days=find('research-days'),status=find('research-status'),results=find('research-results');
- function invalidate(){revision++;results.replaceChildren();}
+ function invalidate(){revision++;results.replaceChildren();document.dispatchEvent(new CustomEvent('research-cleared'));}
  function controls(){find('research-load').disabled=busy||!signedIn||mode==='not_enabled';find('research-run').disabled=busy||!signedIn||!picker.value;find('research-save').disabled=busy||!signedIn||!picker.value||kind.value==='crypto';}
  function filter(){const previous=picker.value,term=find('research-search').value.trim().toLowerCase(),exchange=find('research-exchange').value;
   const matched=assets.filter(a=>(!exchange||a.exchange===exchange)&&`${a.name} ${a.symbol} ${a.exchange}`.toLowerCase().includes(term));
@@ -29,6 +29,7 @@
    const exact=el('details'),table=el('table');exact.className='chart-table';exact.append(el('summary','Exact indicator values'));for(const [key,value]of Object.entries(indicators)){const row=el('tr');row.append(el('th',key.replaceAll('_',' ')),el('td',format(value)));table.append(row);}exact.append(table);results.append(exact);
   }else results.append(el('p','Indicators are unavailable when history is too short or has gaps. No values were invented.'));
   const coverage=el('details');coverage.append(el('summary','Data coverage and limitations'),el('p',`${data.window.observations} observations · ${data.window.missing_sessions.length} missing dates.`));for(const text of data.limitations)coverage.append(el('p',text));if(data.window.missing_sessions.length)coverage.append(el('p',data.window.missing_sessions.join(', ')));results.append(coverage);
+  document.dispatchEvent(new CustomEvent('research-ready',{detail:data}));
  }
  find('research-form').addEventListener('submit',async event=>{event.preventDefault();if(busy||!signedIn||!picker.value)return;invalidate();const current=revision;busy=true;controls();status.textContent='Loading completed historical observations…';try{const data=await api(`/v2/research/analysis?kind=${encodeURIComponent(kind.value)}&asset_id=${encodeURIComponent(picker.value)}&days=${encodeURIComponent(days.value)}`);if(current!==revision||!signedIn)return;draw(data);status.textContent='Analysis ready. Zoom and chart controls use already-loaded data.';}catch(error){if(current===revision){results.replaceChildren();status.textContent=error.message;}}finally{busy=false;controls();}});
  find('research-save').addEventListener('click',()=>{const asset=assets.find(a=>a.id===picker.value);if(!signedIn||!asset||asset.asset_class==='crypto')return;document.dispatchEvent(new CustomEvent('account-save-listing',{detail:{id:asset.id,name:asset.name}}));});

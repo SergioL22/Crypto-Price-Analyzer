@@ -71,3 +71,8 @@ class ImportConfirm(Contract):
 
 class DemoLogin(Contract):
     profile:Literal['avery','sam']
+
+
+class AssessmentRequest(Contract):
+    analysis_token:Annotated[str,Field(strict=True,min_length=20,max_length=50000)]
+    include_position:Annotated[bool,Field(strict=True)]=False

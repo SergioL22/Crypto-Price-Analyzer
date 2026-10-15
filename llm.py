@@ -49,7 +49,7 @@ def recommendation_schema(evidence):
 class OpenAIRecommender:
     """Replaceable adapter exposing recommend(evidence) -> validated dictionary."""
 
-    def __init__(self, api_key, model, *, post=None):
+    def __init__(self, api_key, model, *, post=None, instructions=INSTRUCTIONS):
         if not isinstance(api_key, str) or not api_key.strip():
             raise RecommendationError('Set OPENAI_API_KEY to enable AI recommendations.')
         if not isinstance(model, str) or not model.strip():
@@ -57,6 +57,7 @@ class OpenAIRecommender:
         self._api_key = api_key.strip()
         self.model = model.strip()
         self._post = post or requests.post
+        self.instructions = instructions
 
     @classmethod
     def from_environment(cls):
@@ -68,7 +69,7 @@ class OpenAIRecommender:
         except (TypeError, ValueError):
             raise RecommendationError('Recommendation evidence must be valid JSON with finite numbers.') from None
         payload = {
-            'model': self.model, 'instructions': INSTRUCTIONS,
+            'model': self.model, 'instructions': self.instructions,
             'input': [{'role': 'user', 'content': encoded}],
             'store': False, 'max_output_tokens': 3000,
             'text': {'format': {'type': 'json_schema', 'name': 'crypto_recommendation',

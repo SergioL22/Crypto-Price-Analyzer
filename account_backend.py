@@ -11,19 +11,27 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.concurrency import run_in_threadpool
 from account_settings import AccountSettings
 from account_store import AccountStore,AccountError
-from account_models import Workspace,WorkspaceUpdate,ImportConfirm,DemoLogin
-from backend_service import BackendError
+from account_models import Workspace,WorkspaceUpdate,ImportConfirm,DemoLogin,AssessmentRequest
+from market_assessment import Assessments
+from recommendations import RecommendationError
+from prediction_validation import report as validation_report
+from prediction_journal import Journal
+import hashlib
+from backend_service import BackendError,AdmissionGate
 from stock_provider import StockDataError
 from api import UpstreamError
 
 ROOT=Path(__file__).parent
 
 
-def create_app(settings=None,store=None,identity=None,research=None):
+def create_app(settings=None,store=None,identity=None,research=None,assessment_factory=None,journal=None):
     settings=settings or AccountSettings.from_environment()
     store=store or AccountStore(settings.database_url)
     from account_research import Research,DisabledResearch
     research=research or (Research() if settings.demo else DisabledResearch())
+    assessments=Assessments(settings.state_secret,factory=assessment_factory)
+    assessment_gate=AdmissionGate(1)
+    journal=journal or Journal()
     if not settings.demo and research.mode=='local-live':raise ValueError('Private live provider adapter is loopback-only')
     if not settings.demo and identity is None:
         from account_auth import ManagedOIDC
@@ -37,6 +45,8 @@ def create_app(settings=None,store=None,identity=None,research=None):
     @app.exception_handler(AccountError)
     async def account_error(request,error):
         messages={'sign_in_required':'Sign in to access your workspace.','workspace_changed':'Your workspace changed. Reload it and review your changes.',
+                  'assessment_expired':'Analysis expired or belongs to another session. Run analysis again.',
+                  'assessment_history':'AI assessment requires complete recent history and valid indicators.',
                   'market_not_enabled':'Market data is not enabled for this deployment.',
                   'history_unavailable':'No completed historical observations are available.',
                   'crypto_window':'Crypto history supports up to 364 completed days.',
@@ -56,6 +66,9 @@ def create_app(settings=None,store=None,identity=None,research=None):
 
     @app.exception_handler(StockDataError)
     async def stock_error(request,error):return JSONResponse(status_code=503,content={'error':{'code':error.code,'message':'Stock data is unavailable. Check provider setup or quota, then retry manually.'}})
+
+    @app.exception_handler(RecommendationError)
+    async def assessment_error(request,error):return JSONResponse(status_code=503,content={'error':{'code':'assessment_unavailable','message':'AI assessment unavailable. Check OpenAI setup or quota; raw analysis remains available. No automatic retry.'}})
 
     @app.exception_handler(UpstreamError)
     async def crypto_error(request,error):return JSONResponse(status_code=503,content={'error':{'code':'crypto_unavailable','message':'Crypto history is unavailable. Retry manually later.'}})
@@ -186,7 +199,30 @@ def create_app(settings=None,store=None,identity=None,research=None):
     @app.get('/v2/research/analysis')
     def research_analysis(request:Request,kind:str=Query(pattern='^(stock|etf|crypto)$'),asset_id:str=Query(min_length=1,max_length=160),days:int=Query(ge=35,le=3660)):
         session=authenticated(request);store.throttle('research:'+session['owner'],6)
-        return research.analyze(kind,asset_id,days)
+        data=research.analyze(kind,asset_id,days)
+        data['analysis_token']=assessments.bind(data,session)
+        return data
+
+    @app.get('/v2/research/validation')
+    def validation(request:Request,asset_id:str|None=Query(default=None,max_length=160)):
+        session=authenticated(request);store.throttle('validation:'+session['owner'],6)
+        if not settings.demo:raise AccountError('market_not_enabled',503)
+        return validation_report(journal,asset_id)
+
+    @app.post('/v2/research/recommendation')
+    def recommend(body:AssessmentRequest,request:Request):
+        session=authenticated(request,True)
+        if research.mode not in ('sample','local-live'):raise AccountError('market_not_enabled',503)
+        with assessment_gate.enter():
+            data=assessments.read(body.analysis_token,session,research.now())
+            store.throttle('assessment:'+session['owner'],2)
+            store.throttle('assessment-token:'+hashlib.sha256(body.analysis_token.encode()).hexdigest(),1)
+            position=None
+            if body.include_position:
+                position=next((h for h in store.read(session['owner'])['workspace']['holdings'] if h['id']==data['asset']['id']),None)
+            result=assessments.recommend(data,position)
+            authenticated(request)  # discard a response if the session was revoked during the provider call
+            return result
 
     @app.get('/')
     def home():return FileResponse(ROOT/'static'/'account.html')
