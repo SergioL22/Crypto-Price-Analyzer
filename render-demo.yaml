@@ -1,0 +1,12 @@
+# Deploy as a NEW Blueprint with Blueprint Path render-demo.yaml.
+# This does not update or replace the private live-data service.
+services:
+  - type: web
+    name: research-desk-demo
+    runtime: docker
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile.demo
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass

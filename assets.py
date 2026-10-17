@@ -19,7 +19,7 @@ class Asset:
     def __post_init__(self):
         if self.asset_class not in ('crypto', 'stock', 'etf'):
             raise ValueError('Unsupported asset class')
-        if self.provider not in ('coingecko', 'twelvedata'):
+        if self.provider not in ('coingecko', 'twelvedata', 'demo'):
             raise ValueError('Unsupported provider')
         if not re.fullmatch(r'[A-Za-z0-9.^_-]{1,100}', self.symbol):
             raise ValueError('Invalid provider symbol')
@@ -32,7 +32,7 @@ class Asset:
         if self.asset_class == 'crypto':
             if self.provider != 'coingecko' or self.exchange != 'XCRY' or self.timezone != 'UTC':
                 raise ValueError('Invalid crypto identity')
-        elif self.provider != 'twelvedata' or self.exchange not in US_EQUITY_MICS or self.currency != 'USD' or self.timezone != 'America/New_York':
+        elif self.provider not in ('twelvedata','demo') or self.exchange not in US_EQUITY_MICS or self.currency != 'USD' or self.timezone != 'America/New_York':
             raise ValueError('Only supported US USD listings are enabled')
 
     @property

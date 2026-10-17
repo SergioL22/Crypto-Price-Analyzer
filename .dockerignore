@@ -1,6 +1,7 @@
 # Allow only runtime source and packaged assets into the image build context.
 **
 !Dockerfile
+!Dockerfile.demo
 !.dockerignore
 !requirements-backend.txt
 !*.py

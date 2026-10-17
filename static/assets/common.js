@@ -37,3 +37,7 @@ async function request(url, options) {
 function rows(parent, values) { const dl = el("dl"); for (const [key, value] of Object.entries(values)) { const row = el("div"); row.append(el("dt", key), el("dd", format(value))); dl.append(row); } parent.append(dl); }
 let savedHoldingsRevision = 0;
 let portfolioMutationPending = false;
+
+function demoWorkspace(){return typeof document!=='undefined'&&document.body?.dataset?.demo==='true';}
+function equityWorkspaceKey(){return demoWorkspace()?'research-desk.demo.equities.v1':'research-desk.equities.v1';}
+function researchSourceLabel(){return demoWorkspace()?'Synthetic demonstration data (not market data)':'Twelve Data split-adjusted daily history';}

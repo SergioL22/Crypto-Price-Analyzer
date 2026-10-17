@@ -105,3 +105,23 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: preview.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10000/)" = 401
           test "$(curl -s -o /dev/null -w '%{http_code}' -u preview:synthetic-container-test-password-only -H 'Host: preview.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10000/)" = 200
           test "$(curl -s -o /dev/null -w '%{http_code}' -u preview:synthetic-container-test-password-only -H 'Host: preview.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10000/v1/holdings)" = 404
+
+      - name: Build separate synthetic public demo
+        run: docker build -f Dockerfile.demo -t research-demo:test .
+      - name: Verify anonymous demo has no live-provider setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name research-demo -p 127.0.0.1:10001:10000 -e PUBLIC_DEMO_ORIGIN=https://demo.example research-demo:test
+          trap 'docker logs research-demo; docker rm -f research-demo >/dev/null' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --silent --show-error --fail --max-time 2 http://127.0.0.1:10001/health; then ready=1; break; fi
+            if [ "$(docker inspect --format '{{.State.Running}}' research-demo)" != true ]; then exit 1; fi
+            sleep 1
+          done
+          test "$ready" = 1
+          curl --silent --show-error --fail -H 'Host: demo.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10001/ -o demo-page.html
+          grep -q 'SYNTHETIC DEMO' demo-page.html
+          curl --silent --show-error --fail -H 'Host: demo.example' -H 'X-Forwarded-Proto: https' 'http://127.0.0.1:10001/v1/stock-analysis?asset_id=demo:stock:XNYS:USD:SIMSUN&days=90' | python -c "import json,sys; d=json.load(sys.stdin); assert d['asset']['provider']=='demo' and d['history'] and 'SYNTHETIC DEMO' in d['limitations'][0]"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: demo.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10001/v1/holdings)" = 404

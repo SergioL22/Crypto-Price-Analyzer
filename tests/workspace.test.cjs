@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname,'../static/assets/workspace.js'),'utf8');
-function run(url, comparison = false) {
+function run(url, comparison = false,demo=false) {
  const location = new URL(url,'http://localhost');
  const link = (text, href) => ({textContent:text, attrs:{href},getAttribute(k){return this.attrs[k]},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this.attrs[k]}});
  const markets=[link('Stocks & ETFs','/'),link('Crypto','/crypto.html')];
@@ -12,7 +12,7 @@ function run(url, comparison = false) {
  pages[0].attrs['aria-current']='page';
  const sections=['stocks','crypto'].map(workspace=>({dataset:{workspace},hidden:false}));
  const heading={textContent:'Portfolio'};
- const body={dataset:{}};
+ const body={dataset:{demo:demo?'true':'false'}};
  const document={body,querySelectorAll:s=>s==='[data-workspace]'?sections:s==='.market-nav a'?markets:pages,querySelector:s=>s==='header h1'?heading:sections[0],getElementById:()=>comparison?{}:null};
  vm.runInNewContext(source,{document,window:{location},URLSearchParams});
  return {body,markets,pages,sections,heading};
@@ -37,3 +37,6 @@ test('comparison has its own active navigation state',()=>{
  assert.equal(s.pages[0].attrs['aria-current'],undefined);
  assert.equal(s.pages[2].attrs['aria-current'],'page');
 });
+
+
+test('public demo does not reveal legacy crypto tools through URL parameters',()=>{const s=run('/portfolio.html?market=crypto',false,true);assert.equal(s.sections[0].hidden,false);assert.equal(s.sections[1].hidden,true);assert.equal(s.body.dataset.market,'stocks');});

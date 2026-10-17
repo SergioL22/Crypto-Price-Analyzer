@@ -13,7 +13,7 @@ function setup(simulator=false){
  const e=simulator?Object.fromEntries(names.map(n=>[n,new E()])):{};
  if(simulator)e['simulation-form'].submit=new E('button');
  const calls=[],charts=[],storage=new Map([['research-desk.equities.v1',JSON.stringify({listings:[{id,name:'Example'},{id:other,name:'Benchmark'}]})]]);
- const context={Date,Number,Array,JSON,Math,encodeURIComponent,$:n=>e[n],el:(tag,text)=>new E(tag,text),priceLabel:v=>'$'+v.toFixed(2),format:String,priceChart:(...args)=>charts.push(args),localStorage:{getItem:k=>storage.get(k)},request:url=>new Promise((resolve,reject)=>calls.push({url,resolve,reject}))};
+ const context={demoWorkspace:()=>false,equityWorkspaceKey:()=>'research-desk.equities.v1',researchSourceLabel:()=>'Twelve Data split-adjusted daily history',Date,Number,Array,JSON,Math,encodeURIComponent,$:n=>e[n],el:(tag,text)=>new E(tag,text),priceLabel:v=>'$'+v.toFixed(2),format:String,priceChart:(...args)=>charts.push(args),localStorage:{getItem:k=>storage.get(k)},request:url=>new Promise((resolve,reject)=>calls.push({url,resolve,reject}))};
  vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../static/assets/research-tools.js'),'utf8'),context);
  return {e,calls,charts,context,tools:vm.runInContext('ResearchReturns',context)};
 }

@@ -1,7 +1,7 @@
 "use strict";
 // Replaceable feed contract. No subscription, provider switch or paid calls here.
 const ScreeningFeed = (() => {
- const capabilities=Object.freeze({provider:'Twelve Data history',universe:'selected_list',max_listings:5,
+ const capabilities=Object.freeze({provider:typeof researchSourceLabel==='function'?researchSourceLabel():'Twelve Data history',universe:'selected_list',max_listings:5,
   periods:['ytd','1m','6m','1y'],metrics:['return_fraction','average_volume','price'],
   unavailable:['revenue','market_cap','industry','dividend_yield','expense_ratio']});
  function window(period,now=new Date()){

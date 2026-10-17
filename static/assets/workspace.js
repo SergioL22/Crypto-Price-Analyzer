@@ -2,7 +2,7 @@
 (() => {
  if (!document.querySelectorAll) return;
  const query = new URLSearchParams(window.location.search);
- const isCrypto = window.location.pathname === "/crypto.html" || query.get("market") === "crypto";
+ const isCrypto = document.body.dataset.demo!=='true' && (window.location.pathname === "/crypto.html" || query.get("market") === "crypto");
  const market = isCrypto ? "crypto" : "stocks";
  const compare = !isCrypto && query.get("view") === "compare" && Boolean(document.getElementById("compare-workspace"));
  document.body.dataset.market = market;

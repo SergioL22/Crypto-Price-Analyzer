@@ -75,7 +75,7 @@
    const resultHeading=el("div");resultHeading.className="result-heading";const changeListing=el("a","Change listing");changeListing.href="#stock-search";resultHeading.append(el("h3", `${data.asset.name} (${data.asset.symbol}) · ${data.asset.exchange}`),changeListing);result.append(resultHeading);
    const w = data.window;
 
-   const notes=el("details");notes.append(el("summary","Data coverage and research limitations"));if(data.history_source)notes.append(el('p',data.history_source.cache_hit?'Recent history reused; no new provider history request.':'History fetched for this request.'));notes.append(el("p", `${w.observations} of ${w.expected_sessions} completed sessions · ${w.start} to ${w.end} · USD · split-adjusted prices`));
+   const notes=el("details");notes.append(el("summary","Data coverage and research limitations"));if(data.history_source)notes.append(el('p',data.history_source.cache_hit?'Recent history reused; no new provider history request.':'History fetched for this request.'));notes.append(el("p", `${w.observations} of ${w.expected_sessions} completed sessions · ${w.start} to ${w.end} · USD · ${demoWorkspace()?"synthetic generated prices":"split-adjusted prices"}`));
    if(data.history_source)notes.append(el('p',`Original history fetch: ${data.history_source.fetched_at_utc} · ${data.history_source.age_seconds}s old when requested. Cache reuse never means a live quote.`));
    if(w.missing_sessions.length) result.append(el("p", "Some requested trading days are missing. The chart shows available data; indicators may be unavailable. Expand data coverage below for details."));
    if(data.history.length) {
@@ -83,7 +83,7 @@
     const price=el("article"),change=el("article");
     price.className="price-hero";
     const priceValue=el("p",priceLabel(last.price));priceValue.className="price-value";
-    price.append(el("h3","Latest available close"),priceValue,el("p",`${last.date} · USD · historical close`));
+    price.append(el("h3",demoWorkspace()?"Synthetic demo close":"Latest available close"),priceValue,el("p",`${last.date} · USD · historical close`));
     const percent=(last.price/first.price-1)*100,returnValue=el("p",`${percent>0?'+':''}${percent.toFixed(2)}%`);returnValue.className=`return-value ${percent>0?'return-positive':percent<0?'return-negative':'return-flat'}`;
     change.append(el("h3","Price change in returned history"),returnValue,el("p",`${first.date} to ${last.date} · excludes dividends`));
     cards.append(price,change);result.append(cards);

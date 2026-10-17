@@ -43,7 +43,7 @@ function watchPerformancePanel(root,listing,current,startTracking){
    const points=ResearchReturns.series(data,listing.saved_on,true),first=points[0],last=points.at(-1),change=last.price-first.price,percent=change/first.price*100;
    if(!Number.isFinite(percent))throw Error('Price change cannot be represented.');
    output.replaceChildren(el('p',`${percent>=0?'+':''}${percent.toFixed(2)}% · ${change>=0?'+':''}${priceLabel(change)} per share · ${first.date} to ${last.date}`));
-   output.append(el('p',`Starting close ${priceLabel(first.price)} · latest close ${priceLabel(last.price)}. Both prices come from the same split-adjusted history response; the starting value may be restated after a split. History retrieved ${data.history_source?.fetched_at_utc||'time unavailable'}${data.history_source?.cache_hit?' (cached)':''}.`));
+   output.append(el('p',`Starting close ${priceLabel(first.price)} · latest close ${priceLabel(last.price)}. ${demoWorkspace()?"Both values are generated examples for a fictional listing.":"Both prices come from the same split-adjusted history response; the starting value may be restated after a split."} History retrieved ${data.history_source?.fetched_at_utc||'time unavailable'}${data.history_source?.cache_hit?' (cached)':''}.`));
    ResearchReturns.chart(output,points,null,'Watchlist closing prices · USD');
   }catch(error){if(valid())output.replaceChildren(el('p',error.message));}finally{busy=false;button.disabled=false;}
  });
@@ -54,9 +54,9 @@ function watchPerformancePanel(root,listing,current,startTracking){
  const asset=$('simulation-asset'),benchmark=$('simulation-benchmark'),output=$('simulation-results'),status=$('simulation-status');
  let listings=[];
  try{
-  const raw=JSON.parse(localStorage.getItem('research-desk.equities.v1')||'{"listings":[]}');
+  const raw=JSON.parse(localStorage.getItem(equityWorkspaceKey())||'{"listings":[]}');
   if(!Array.isArray(raw.listings)||raw.listings.length>50)throw Error();
-  listings=raw.listings.filter(a=>typeof a.name==='string'&&a.name.length<=500&&/^twelvedata:(stock|etf):(XNYS|XNAS|XNGS|XNMS|XNCM|ARCX|XASE|BATS):USD:[A-Za-z0-9.^_-]{1,100}$/.test(a.id));
+  listings=raw.listings.filter(a=>typeof a.name==='string'&&a.name.length<=500&&/^(twelvedata|demo):(stock|etf):(XNYS|XNAS|XNGS|XNMS|XNCM|ARCX|XASE|BATS):USD:[A-Za-z0-9.^_-]{1,100}$/.test(a.id)&&a.id.startsWith(demoWorkspace()?"demo:":"twelvedata:"));
  }catch{status.textContent='Saved listings could not be read. Your existing workspace was not changed.';}
  for(const [picker,prompt]of [[asset,'Choose a saved stock or ETF'],[benchmark,'No comparison']]){const option=el('option',prompt);option.value='';picker.append(option);for(const a of listings){const o=el('option',a.name);o.value=a.id;picker.append(o);}}
  let busy=false,generation=0;
@@ -80,10 +80,10 @@ function watchPerformancePanel(root,listing,current,startTracking){
    const gain=card(result.change<0?'Hypothetical loss':'Hypothetical gain',`${result.change>0?'+':''}${priceLabel(result.change)}`,result.change<0?'return-negative':result.change>0?'return-positive':'return-flat');
    const percent=el('p',`${result.percent>0?'+':''}${result.percent.toFixed(2)}%`);percent.className='simulation-percent';gain.append(percent);
    card('Starting amount',priceLabel(amount),'simulation-start').append(el('p',`At the ${result.start} close`));
-   output.append(el('h3',name(selected)),cards,el('p',`${result.start} to ${result.end} · ${format(result.shares)} split-adjusted equivalent fractional shares. Historical prices are adjusted for splits; no shares are actually bought. Both endpoints use one adjustment basis.`));
+   output.append(el('h3',name(selected)),cards,el('p',`${result.start} to ${result.end} · ${format(result.shares)} ${demoWorkspace()?"hypothetical fractional units using generated prices. This is not an actual investment return.":"split-adjusted equivalent fractional shares. Historical prices are adjusted for splits; no shares are actually bought. Both endpoints use one adjustment basis."}`));
    if(comparison)output.append(el('h3',`Comparison: ${name(compare)}`),el('p',`${priceLabel(amount)} → ${priceLabel(comparison.value)} (${comparison.percent.toFixed(2)}%) on matching sessions. Difference in ending value: ${priceLabel(result.value-comparison.value)}.`));
    ResearchReturns.chart(output,points,amount,'Hypothetical investment value · USD');
-   output.append(el('p',`Source: Twelve Data split-adjusted daily history. Retrieved ${data.history_source?.fetched_at_utc||'time unavailable'}${data.history_source?.cache_hit?' (cached)':''}. Excludes dividends, fees, taxes and slippage. Past performance does not predict future results.`));
+   output.append(el('p',`Source: ${researchSourceLabel()}. Retrieved ${data.history_source?.fetched_at_utc||'time unavailable'}${data.history_source?.cache_hit?' (cached)':''}. Excludes dividends, fees, taxes and slippage. Past performance does not predict future results.`));
    status.textContent='Hypothetical calculation complete. No trade or position was saved.';
   }catch(error){if(revision===generation){output.replaceChildren();status.textContent=error.message;}}finally{busy=false;const submit=form.querySelector('button[type="submit"]');if(submit)submit.disabled=false;}
  });

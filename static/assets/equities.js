@@ -1,8 +1,8 @@
 "use strict";
 // Separate browser-local stock workspace; legacy crypto files are never rewritten.
 (() => {
- const key = "research-desk.equities.v1";
- const valid = id => typeof id === "string" && /^twelvedata:(stock|etf):(XNYS|XNAS|XNGS|XNMS|XNCM|ARCX|XASE|BATS):USD:[A-Za-z0-9.^_-]{1,100}$/.test(id);
+ const key = equityWorkspaceKey();
+ const valid = id => typeof id === "string" && /^(twelvedata|demo):(stock|etf):(XNYS|XNAS|XNGS|XNMS|XNCM|ARCX|XASE|BATS):USD:[A-Za-z0-9.^_-]{1,100}$/.test(id) && id.startsWith(demoWorkspace()?"demo:":"twelvedata:");
  const empty = () => ({version:1, listings:[], holdings:[], alerts:[]});
  function read() {
   const raw = localStorage.getItem(key); if (raw === null) return empty();
@@ -134,7 +134,7 @@
  // prevents multiple open pages from multiplying the automatic request rate.
  const monitorStart=$('equity-monitor-start'),monitorStop=$('equity-monitor-stop');
  const monitorStatus=$('equity-monitor-status'),monitorResults=$('equity-monitor-results');
- const leaseKey='research-desk.monitor-attempt.v1';
+ const leaseKey=demoWorkspace()?'research-desk.demo.monitor-attempt.v1':'research-desk.monitor-attempt.v1';
  let monitoring=false,monitorBusy=false,monitorTimer=null,monitorIndex=0,monitorGeneration=0;
  const observations=new Map();
  function monitorMessage(text){if(monitorStatus)monitorStatus.textContent=text;}

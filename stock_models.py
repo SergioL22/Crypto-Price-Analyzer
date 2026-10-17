@@ -7,7 +7,7 @@ from backend_models import Contract, HistoryPoint
 class AssetIdentity(Contract):
     id: str
     asset_class: Literal['crypto', 'stock', 'etf']
-    provider: Literal['coingecko', 'twelvedata']
+    provider: Literal['coingecko', 'twelvedata', 'demo']
     symbol: str
     name: str
     exchange: str
@@ -54,7 +54,7 @@ class HistorySource(Contract):
 class StockResearch(Contract):
     asset: AssetIdentity
     generated_at_utc: str
-    adjustment: Literal['splits']
+    adjustment: Literal['splits', 'synthetic']
     window: SessionCoverage
     history: list[SessionPoint]
     bars: list[DailyBar]
