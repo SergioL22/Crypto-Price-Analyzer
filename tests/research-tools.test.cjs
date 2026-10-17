@@ -9,7 +9,7 @@ class E{
 }
 const id='twelvedata:stock:XNYS:USD:ABC',other=id.replace('ABC','XYZ');
 function setup(simulator=false){
- const names=['simulation-form','simulation-asset','simulation-benchmark','simulation-amount','simulation-date','simulation-calendar','simulation-status','simulation-results'];
+ const names=['simulation-form','simulation-asset','simulation-benchmark','simulation-amount','simulation-date','simulation-status','simulation-results'];
  const e=simulator?Object.fromEntries(names.map(n=>[n,new E()])):{};
  if(simulator)e['simulation-form'].submit=new E('button');
  const calls=[],charts=[],storage=new Map([['research-desk.equities.v1',JSON.stringify({listings:[{id,name:'Example'},{id:other,name:'Benchmark'}]})]]);
@@ -30,12 +30,6 @@ test('simulator discards changed inputs and never requests the comparison afterw
 test('matching benchmark uses same initial amount and sessions',async()=>{const s=setup(true);s.e['simulation-asset'].value=id;s.e['simulation-benchmark'].value=other;s.e['simulation-amount'].value='100';s.e['simulation-date'].value='2026-10-14';const pending=s.e['simulation-form'].listeners.submit({preventDefault(){}});s.calls[0].resolve(history());await new Promise(resolve=>setImmediate(resolve));s.calls[1].resolve(history([10,15]));await pending;assert.match(s.e['simulation-results'].textContent,/Difference in ending value: \$50.00/);assert.match(s.e['simulation-status'].textContent,/No trade/);});
 
 
-test('optional calendar copies its date into the visible typed field and invalidates results',()=>{
- const s=setup(true);s.e['simulation-calendar'].value='2026-10-14';s.e['simulation-calendar'].listeners.change();assert.equal(s.e['simulation-date'].value,'2026-10-14');assert.match(s.e['simulation-status'].textContent,/Inputs changed/);assert.equal(s.calls.length,0);
- s.e['simulation-date'].value='2026-10-15';s.e['simulation-date'].listeners.input();assert.equal(s.e['simulation-calendar'].value,'');assert.equal(s.e['simulation-date'].value,'2026-10-15');
-});
-
-
 test('numeric date entry adds separators progressively and preserves date validation',()=>{
  const s=setup(true),field=s.e['simulation-date'];
  for(const [input,expected] of [['2020','2020'],['20200','2020-0'],['202001','2020-01'],['2020013','2020-01-3'],['20200131','2020-01-31'],['2020-01-31','2020-01-31']]){field.value=input;field.listeners.input();assert.equal(field.value,expected);}
@@ -43,4 +37,6 @@ test('numeric date entry adds separators progressively and preserves date valida
 });
 
 
-test('calendar date alternative also accepts numeric entry and clears both fields',()=>{const s=setup(true),calendar=s.e['simulation-calendar'];calendar.value='20200131';calendar.listeners.input();assert.equal(calendar.value,'2020-01-31');assert.equal(s.e['simulation-date'].value,'2020-01-31');calendar.value='';calendar.listeners.input();assert.equal(s.e['simulation-date'].value,'');assert.equal(s.calls.length,0);});
+
+
+test('simulator exposes one numeric calendar date field without a duplicate',()=>{const html=fs.readFileSync(path.join(__dirname,'../static/portfolio.html'),'utf8');assert.match(html,/Calendar date \(YYYY-MM-DD\)/);assert.match(html,/id="simulation-date"[^>]*inputmode="numeric"/);assert.doesNotMatch(html,/id="simulation-calendar"|Starting date \(YYYY-MM-DD\)/);});
