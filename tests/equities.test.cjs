@@ -11,11 +11,11 @@ class E {
  get options(){return this.children;}addEventListener(name,fn){this.listeners[name]=fn;}
 }
 function setup(file='equities.js',initial={version:1,listings:[{id,name:'Example'}],holdings:[],alerts:[]}){
- const names=['equity-list','equity-status','equity-save','equity-save-status','stock-options','equity-holding','equity-holding-form','equity-quantity','equity-cost','equity-remove-holding','equity-value','equity-valuation','equity-holdings','equity-alert-listing','equity-alert-type','equity-alert-direction','equity-alert-threshold','equity-alert-form','equity-alerts','equity-check','equity-check-result','equity-restore-file','equity-restore-preview','equity-restore-apply','equity-monitor-start','equity-monitor-stop','equity-monitor-status','equity-monitor-results','screen-list','screen-status','screen-results','screen-order','screen-add','screen-run'];
+ const names=['equity-list','equity-status','equity-save','equity-save-status','stock-options','equity-holding','equity-holding-form','equity-quantity','equity-cost','equity-remove-holding','equity-value','equity-valuation','equity-holdings','equity-alert-listing','equity-alert-type','equity-alert-direction','equity-alert-threshold','equity-alert-form','equity-alerts','equity-check','equity-check-result','equity-restore-file','equity-restore-preview','equity-restore-apply','equity-monitor-start','equity-monitor-stop','equity-monitor-status','equity-monitor-results','screen-list','screen-status','screen-results','screen-order','screen-add','screen-run','screen-period','screen-kind','screen-min-price','screen-max-price','screen-min-return','screen-min-volume','screen-clear-filters','screen-filter-toggle','screen-filters'];
  const elements=Object.fromEntries(names.map(n=>[n,new E()])),storage=new Map([[key,JSON.stringify(initial)]]),requests=[];
  const timers=[],events={},windowEvents={};let now=Date.now();const Clock=class extends Date{constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}};
  const context={setTimeout:(fn,delay)=>{const timer={fn,delay};timers.push(timer);return timer;},clearTimeout:timer=>{timer.cancelled=true;},Intl,Date:Clock,Set,Map,JSON,Number,Array,window:{addEventListener:(name,fn)=>windowEvents[name]=fn,confirm:()=>true},localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)},document:{addEventListener:(name,fn)=>events[name]=fn,getElementById:n=>elements[n],createElement:()=>new E()},fetch:(url)=>new Promise(resolve=>requests.push({url,resolve}))};
- for(const name of ['common.js',file])vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/assets',name),'utf8'),context);
+ for(const name of (file==='screener.js'?['common.js','screening-feed.js',file]:['common.js',file]))vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/assets',name),'utf8'),context);
  const picker=elements['stock-options'];picker.value=id;const option=new E();option.value=id;option.textContent='Example';picker.append(option);
  return {timers,events,windowEvents,context,advance:ms=>now+=ms,e:elements,storage,requests,answer:(i,data)=>requests[i].resolve({ok:true,json:async()=>data}),data:()=>JSON.parse(storage.get(key))};
 }
@@ -83,4 +83,11 @@ test('comparison offers ascending YTD performance only within the chosen list',a
  const year=new Date().getFullYear(),data=close=>({bars:[{date:`${year-1}-12-31`,close:100,volume:100},{date:`${year}-01-02`,close,volume:100}],window:{complete:true,latest_closed_session:`${year}-01-02`}});
  const pending=s.e['screen-run'].listeners.click();s.answer(0,data(110));await new Promise(r=>setImmediate(r));s.answer(1,data(90));await pending;
  assert.match(s.e['screen-results'].children[0].textContent,/Second/);assert.match(s.e['screen-status'].textContent,/not a whole-market/);
+});
+
+
+test('result filters use loaded selected results without additional requests',async()=>{
+ const s=setup('screener.js');s.e['screen-period'].value='1m';s.e['screen-order'].value='ytd_return';s.e['screen-add'].listeners.click();const pending=s.e['screen-run'].listeners.click();s.answer(0,{bars:[{date:'2026-09-16',close:100,volume:100},{date:'2026-10-16',close:110,volume:200}],window:{complete:true,latest_closed_session:'2026-10-16'}});await pending;
+ assert.match(s.e['screen-results'].textContent,/Showing 1 of 1/);s.e['screen-min-price'].value='120';s.e['screen-min-price'].listeners.input();assert.match(s.e['screen-results'].textContent,/Showing 0 of 1/);assert.equal(s.requests.length,1);
+ s.e['screen-clear-filters'].listeners.click();assert.match(s.e['screen-results'].textContent,/Showing 1 of 1/);s.e['screen-min-price'].value='200';s.e['screen-max-price'].value='100';s.e['screen-max-price'].listeners.input();assert.match(s.e['screen-results'].textContent,/minimum price/);assert.equal(s.requests.length,1);
 });

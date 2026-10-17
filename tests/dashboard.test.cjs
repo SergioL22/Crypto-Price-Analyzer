@@ -487,3 +487,5 @@ test('rapid search input coalesces and still finds listings outside the rendered
  for(const fn of s.timers)if(!fn.cancelled)fn();
  assert.equal(s.elements['stock-options'].disabled,false);assert.equal(s.elements['stock-options'].children.length,2);assert.match(s.elements['stock-options'].children[1].textContent,/Company 499/);assert.equal(s.requests.length,1);
 });
+
+require('./screening-feed.test.cjs');
