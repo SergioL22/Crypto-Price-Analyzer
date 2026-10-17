@@ -65,7 +65,7 @@ def create_app(settings=None,store=None,identity=None,research=None,assessment_f
     async def capacity_error(request,error):return JSONResponse(status_code=error.status,content={'error':{'code':error.code,'message':'Research is busy. Try again later.'}})
 
     @app.exception_handler(StockDataError)
-    async def stock_error(request,error):return JSONResponse(status_code=503,content={'error':{'code':error.code,'message':'Stock data is unavailable. Check provider setup or quota, then retry manually.'}})
+    async def stock_error(request,error):return JSONResponse(status_code=429 if error.code=='stock_budget' else 503,content={'error':{'code':error.code,'message':'Stock data is unavailable. Check provider setup or quota, then retry manually.'}},headers={'Retry-After':str(error.retry_after_seconds)} if error.retry_after_seconds else None)
 
     @app.exception_handler(RecommendationError)
     async def assessment_error(request,error):return JSONResponse(status_code=503,content={'error':{'code':'assessment_unavailable','message':'AI assessment unavailable. Check OpenAI setup or quota; raw analysis remains available. No automatic retry.'}})
@@ -197,9 +197,9 @@ def create_app(settings=None,store=None,identity=None,research=None,assessment_f
         return research.catalog(kind)
 
     @app.get('/v2/research/analysis')
-    def research_analysis(request:Request,kind:str=Query(pattern='^(stock|etf|crypto)$'),asset_id:str=Query(min_length=1,max_length=160),days:int=Query(ge=35,le=3660)):
+    def research_analysis(request:Request,kind:str=Query(pattern='^(stock|etf|crypto)$'),asset_id:str=Query(min_length=1,max_length=160),days:int=Query(ge=35,le=3660),refresh:bool=False):
         session=authenticated(request);store.throttle('research:'+session['owner'],6)
-        data=research.analyze(kind,asset_id,days)
+        data=research.analyze(kind,asset_id,days,refresh=refresh)
         data['analysis_token']=assessments.bind(data,session)
         return data
 

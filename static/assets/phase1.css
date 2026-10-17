@@ -59,3 +59,10 @@ footer{border-top:1px solid var(--line);padding-top:20px;max-width:95ch;line-hei
 @media(prefers-reduced-motion:reduce){input,select,button{transition:none}}
 
 .stock-search-row{display:flex;align-items:end;gap:12px}.stock-search-row label{min-width:0}.filter-button{background:#24372a;color:#d9efc7;border:1px solid #78926d;white-space:nowrap}.filter-button span{font-size:1.15rem;vertical-align:-1px}.filter-button[aria-expanded="true"]{background:var(--accent);color:#15230f;border-color:var(--accent)}.filter-popover{margin:14px 0;padding:16px;border:1px solid #627c67;border-radius:12px;background:#122018;box-shadow:0 12px 28px #0005}.filter-popover .fields{margin:0}.filter-popover .note{margin-bottom:0}@media(max-width:480px){.stock-search-row{align-items:stretch;flex-direction:column}.filter-button{width:100%}}
+
+/* Foreground monitoring: readable evidence cards on narrow and wide screens. */
+#equity-monitor-results { display:grid; gap:1rem; padding:0; list-style:none; }
+#equity-monitor-results > li { display:grid; gap:.55rem; padding:1rem; border:1px solid var(--border, #30435e); border-radius:12px; overflow-wrap:anywhere; }
+#equity-monitor-results p { margin:0; }
+#equity-monitor-results .monitor-price { font-size:1.25rem; font-weight:700; color:var(--text, #eaf0fa); }
+#equity-monitor-results details { font-size:.85rem; }

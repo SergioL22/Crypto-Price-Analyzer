@@ -45,7 +45,7 @@ def create_app(service=None, *, allowed_origin=None):
         body = {'error': {'code': error.code, 'message': error.message}}
         if error.coverage is not None:
             body['coverage'] = error.coverage
-        headers = {'Retry-After': '1'} if error.status == 429 else None
+        headers = {'Retry-After': str(error.retry_after_seconds)} if error.retry_after_seconds else {'Retry-After':'1'} if error.status==429 else None
         return JSONResponse(status_code=error.status, content=body, headers=headers)
 
     @app.exception_handler(RequestValidationError)
@@ -134,8 +134,8 @@ def create_app(service=None, *, allowed_origin=None):
 
     @app.get('/v1/stock-analysis', response_model=StockResearch, responses=errors)
     def stock_research(asset_id: Annotated[str, Query(min_length=1, max_length=160)],
-                       days: Annotated[int, Query(ge=1, le=3660)] = 3653):
-        return service.stock_research(asset_id, days)
+                       days: Annotated[int, Query(ge=1, le=3660)] = 3653,refresh:bool=False):
+        return service.stock_research(asset_id, days,refresh=refresh)
 
     @app.get('/v1/prices', response_model=PricesResponse, responses=errors)
     def prices():

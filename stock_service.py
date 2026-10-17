@@ -7,6 +7,8 @@ import pandas as pd
 import exchange_calendars as calendars
 import analysis
 from stock_provider import TwelveData, StockDataError
+from stock_cache import HistoryCache
+from stock_validation import validate_bars
 
 
 def session_window(days, now):
@@ -26,9 +28,10 @@ def session_window(days, now):
 
 
 class StockService:
-    def __init__(self, *, provider=None, clock=None):
+    def __init__(self, *, provider=None, clock=None, history_ttl=300, history_capacity=16, error_cooldown=60,history_request_limit=6,history_budget_window=60):
         self.provider = provider or TwelveData()
         self.clock = clock or monotonic
+        self.history_cache=HistoryCache(clock=self.clock,ttl=history_ttl,capacity=history_capacity,cooldown=error_cooldown,request_limit=history_request_limit,budget_window=history_budget_window)
         self._lock = Lock()
         self._assets = []
         self._loaded = float('-inf')
@@ -55,20 +58,26 @@ class StockService:
             return dict(assets=[a.public() for a in self._assets], stale=stale, fetched_at_utc=self._fetched,
                         coverage='Supported US USD listings with explicit MICs. Catalog inclusion does not guarantee account access. Delisted coverage and permanent security identity are not available.')
 
-    def research(self, asset_id, days, now):
+    def research(self, asset_id, days, now, *, use_cache=False,refresh=False):
         start, end, sessions = session_window(days, now)
         self.catalog(now)
         with self._lock:
             asset = next((a for a in self._assets if a.id == asset_id), None)
         if asset is None:
             raise StockDataError('stock_not_found', 'Select a supported listing from the stock catalog.')
-        bars = self.provider.history(asset, start, end)
         expected = set(sessions)
         # Drop an intraday/current bar; reject bars on an actual non-trading date.
         all_sessions = set(calendars.get_calendar('XNYS').sessions_in_range(start, end).strftime('%Y-%m-%d'))
-        if any(b['date'] not in all_sessions for b in bars):
-            raise StockDataError('stock_invalid', 'Provider returned a bar on a non-trading date.')
-        bars = [b for b in bars if b['date'] in expected]
+        def fetch():
+            bars=validate_bars(self.provider.history(asset,start,end),start,end)
+            if any(b['date'] not in all_sessions for b in bars):
+                raise StockDataError('stock_invalid','Provider returned a bar on a non-trading date.')
+            return [b for b in bars if b['date'] in expected]
+        if use_cache:
+            key=(asset.id,start,end,sessions[-1] if sessions else None,'splits')
+            bars,source=self.history_cache.load(key,fetch,now,refresh=refresh)
+        else:
+            bars=fetch();source=dict(cache_hit=False,fetched_at_utc=now.isoformat(),age_seconds=0)
         observed = {b['date'] for b in bars}
         missing = [day for day in sessions if day not in observed]
         complete = not missing and bool(bars)
@@ -100,7 +109,7 @@ class StockService:
         return dict(asset=asset.public(), generated_at_utc=now.isoformat(), adjustment='splits',
             window=dict(start=start, end=end, expected_sessions=len(sessions), observations=len(bars),
                         missing_sessions=missing, complete=complete, latest_closed_session=sessions[-1] if sessions else None),
-            history=points, bars=bars, indicators=indicators,
+            history=points, bars=bars, indicators=indicators,history_source=source,
             limitations=['Regular completed US sessions only; the latest bar may be delayed by the provider.',
                          'Prices are requested split-adjusted; dividends are excluded. This is not total return.',
                          'No point-in-time corporate-action archive or guaranteed delisted coverage.',

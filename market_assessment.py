@@ -33,7 +33,7 @@ def evidence(data):
                 indicators=data['indicators'],backtest=dict(strategy='RSI / moving average, illustrative same-close execution',
                 closed_trades=closed,win_rate_pct=backtest['win_rate'] if closed else None,
                 average_closed_return_pct=backtest['avg_return'] if closed else None,asset_drawdown_pct=backtest['max_drawdown']),
-                position=dict(included=False),limitations=data['limitations']+[
+                history_source=data.get('history_source'),position=dict(included=False),limitations=data['limitations']+[
                     'No fundamentals, news, valuation, risk tolerance or investment horizon were supplied.',
                     'Backtest excludes fees, slippage and dividends; signals and fills share a close, so results are optimistic.',
                     'Historical indicators are correlated descriptions, not a validated forecast.',

@@ -63,11 +63,11 @@ class Research:
             if kind=='crypto':return dict(assets=COINS,stale=False,coverage='Three starter coins. Crypto IDs are explicit; no market-wide ranking.')
             result=self.stocks.catalog(self.now());result['assets']=[a for a in result['assets'] if a['asset_class']==kind]
             return result
-    def analyze(self,kind,asset_id,days):
+    def analyze(self,kind,asset_id,days,*,refresh=False):
         with self.gate.enter():
             now=self.now()
             if kind!='crypto':
-                result=self.stocks.research(asset_id,days,now)
+                result=self.stocks.research(asset_id,days,now,use_cache=True,refresh=refresh)
                 if result['asset']['asset_class']!=kind:raise AccountError('asset_mismatch',422)
             else:
                 asset=next((a for a in COINS if a['id']==asset_id),None)
@@ -87,4 +87,4 @@ class Research:
 class DisabledResearch:
     mode='not_enabled'
     def catalog(self,*args):raise AccountError('market_not_enabled',503)
-    def analyze(self,*args):raise AccountError('market_not_enabled',503)
+    def analyze(self,*args,**kwargs):raise AccountError('market_not_enabled',503)

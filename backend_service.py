@@ -26,9 +26,10 @@ from recommendations import build_evidence, RecommendationError, validate_recomm
 
 
 class BackendError(Exception):
-    def __init__(self, status, code, message, coverage=None):
+    def __init__(self, status, code, message, coverage=None, retry_after_seconds=None):
         super().__init__(message)
         self.status, self.code, self.message, self.coverage = status, code, message, coverage
+        self.retry_after_seconds=retry_after_seconds
 
 
 class AdmissionGate:
@@ -78,12 +79,12 @@ class BackendService:
         except StockDataError as error:
             raise BackendError(503, error.code, str(error)) from None
 
-    def stock_research(self, asset_id, days):
+    def stock_research(self, asset_id, days,*,refresh=False):
         try:
             with self.market_gate.enter():
-                return self.stocks.research(asset_id, days, self.now())
+                return self.stocks.research(asset_id, days, self.now(),use_cache=True,refresh=refresh)
         except StockDataError as error:
-            raise BackendError(404 if error.code == 'stock_not_found' else 503, error.code, str(error)) from None
+            raise BackendError(404 if error.code == 'stock_not_found' else 429 if error.code == 'stock_budget' else 503,error.code,str(error),retry_after_seconds=error.retry_after_seconds) from None
 
     def alerts(self, body=None, *, alert_id=None, active=None):
         try:

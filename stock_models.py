@@ -45,6 +45,12 @@ class DailyBar(Contract):
     volume: FiniteFloat
 
 
+class HistorySource(Contract):
+    cache_hit: bool
+    fetched_at_utc: str
+    age_seconds: int
+
+
 class StockResearch(Contract):
     asset: AssetIdentity
     generated_at_utc: str
@@ -54,3 +60,4 @@ class StockResearch(Contract):
     bars: list[DailyBar]
     indicators: dict[str, FiniteFloat | None] | None
     limitations: list[str]
+    history_source: HistorySource | None = None

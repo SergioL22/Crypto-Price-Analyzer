@@ -18,8 +18,8 @@ class Element {
 function setup(storage = new Map()) {
  const elements=Object.fromEntries(['load-coins','catalog-status','coin-search','coin-options','coin-search-status','coin-quick','selected-coin','coin','days','include-position','amount','cost','status','analysis','ai','analysis-form','recommend'].map(id=>[id,new Element()]));
  elements.coin.value='bitcoin'; elements.days.value='90'; elements.amount.value='0'; elements.cost.value='0';
- const requests=[];
- for (const id of ['stock-kind','stock-search','stock-options','stock-status','stock-results','stock-load','stock-run','stock-days','stock-matches','stock-form']) elements[id]=new Element();
+ const requests=[],documentEvents={};
+ for (const id of ['stock-kind','stock-search','stock-options','stock-status','stock-results','stock-load','stock-run','stock-days','stock-matches','stock-form','stock-exchange','stock-query-mode','stock-sort','stock-reset-filters','stock-refresh']) elements[id]=new Element();
  elements['stock-kind'].value='stock'; elements['stock-days'].value='90';
  for (const id of ['restore-file','restore-preview','restore-apply','restore-agree','restore-status','restore-details','alert-form','alerts-load','alerts-check','alerts-status','alerts-list','alerts-history','alert-save','alert-coin','alert-type','alert-direction','alert-threshold']) elements[id]=new Element();
  elements['alert-type'].value='price'; elements['alert-direction'].value='above';
@@ -27,7 +27,7 @@ function setup(storage = new Map()) {
  for (const id of ['holdings-export','backup-status']) elements[id]=new Element();
  for (const id of ['holdings-load','holdings-form','holding-save','holdings-status','holdings-existing','holding-coin','holding-amount','holding-cost']) elements[id]=new Element();
  for (const id of ['watchlist-add','watchlist-status','watchlist-items','portfolio-load','portfolio-status','portfolio-results']) elements[id]=new Element();
- const context={Intl, document:{getElementById:id=>elements[id],createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag),createDocumentFragment:()=>new Element('fragment')},fetch:(url, options)=>new Promise((resolve,reject)=>requests.push({url,options,resolve,reject}))};
+ const context={Intl, document:{addEventListener:(name,fn)=>documentEvents[name]=fn,getElementById:id=>elements[id],createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag),createDocumentFragment:()=>new Element('fragment')},fetch:(url, options)=>new Promise((resolve,reject)=>requests.push({url,options,resolve,reject}))};
  context.Blob=Blob;
  context.URL={createObjectURL:blob=>{objectUrls.push(blob);return 'blob:sample';},revokeObjectURL:url=>revokedUrls.push(url)};
  context.setTimeout=fn=>timers.push(fn);
@@ -47,10 +47,10 @@ function setup(storage = new Map()) {
  const click=()=>elements.recommend.listeners.click();
  const analyze=()=>elements['analysis-form'].listeners.submit({preventDefault(){}});
  const answer=(index, body, status=200)=>requests[index].resolve({ok:status===200,status,json:async()=>body});
- return {elements,requests,click,analyze,answer,storage,windowEvents,downloads,objectUrls,revokedUrls,timers};
+ return {documentEvents,elements,requests,click,analyze,answer,storage,windowEvents,downloads,objectUrls,revokedUrls,timers};
 }
 
-test('stock catalog loads only on click and discards an obsolete asset type',async()=>{
+test('explicit stock catalog reload discards an obsolete asset type',async()=>{
  const s=setup(); assert.equal(s.requests.length,0);
  const pending=s.elements['stock-load'].listeners.click();
  assert.equal(s.requests[0].url,'/v1/assets?asset_class=stock');
@@ -82,7 +82,7 @@ test('stock loading state recovers after errors without repeating a request',asy
  assert.equal(s.elements['stock-run'].textContent,'Loading analysis…');
  s.answer(1,{},503);await pending;
  assert.equal(s.elements['stock-results']['aria-busy'],'false');
- assert.equal(s.elements['stock-run'].textContent,'View analysis');
+ assert.equal(s.elements['stock-run'].textContent,'Update analysis');
  assert.equal(s.requests.length,2);
 });
 
@@ -95,12 +95,12 @@ test('stock dropdown includes more than 200 names, sorts, and filters without re
  assert.match(picker.children[1].textContent,/^Company 000 \(T0\)/);
  assert.match(picker.children.at(-1).textContent,/Company 349/);
  assert.equal(s.elements['stock-run'].disabled,true);
- picker.value='asset-349'; picker.listeners.change(); assert.equal(s.elements['stock-run'].disabled,false);
+ picker.value='asset-349'; const analysis=picker.listeners.change(); assert.equal(s.elements['stock-run'].disabled,true);assert.equal(s.requests.length,2);s.answer(1,{error:{message:'unavailable'}},503);await analysis;
  s.elements['stock-search'].value='Company 349'; s.elements['stock-search'].listeners.input();
  assert.equal(picker.children.length,2); assert.equal(picker.value,'asset-349');
  s.elements['stock-search'].value='no such company'; s.elements['stock-search'].listeners.input();
  assert.equal(picker.value,''); assert.equal(s.elements['stock-run'].disabled,true);
- assert.equal(s.requests.length,1);
+ assert.equal(s.requests.length,2);
 });
 
 test('stock scripts initialize independently without crypto elements or requests',()=>{
@@ -110,6 +110,20 @@ test('stock scripts initialize independently without crypto elements or requests
  for(const file of ['common.js','visuals.js','stocks.js']) vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/assets',file),'utf8'),context);
  assert.equal(elements['stock-run'].disabled,true);
  assert.match(elements['stock-options'].children[0].textContent,/Load the list/);
+});
+
+test('stock discovery sorts by ticker and exact searches never request more data',async()=>{
+ const s=setup(),pending=s.elements['stock-load'].listeners.click();
+ s.answer(0,{assets:[{id:'one',name:'Alpha',symbol:'ZZZ',exchange:'XNYS',currency:'USD'},{id:'two',name:'Bravo',symbol:'AAA',exchange:'XNGS',currency:'USD'}],stale:false});await pending;
+ s.elements['stock-sort'].value='symbol';s.elements['stock-sort'].listeners.change();assert.match(s.elements['stock-options'].children[1].textContent,/Bravo/);
+ s.elements['stock-query-mode'].value='ticker';s.elements['stock-query-mode'].listeners.change();s.elements['stock-search'].value='aaa';s.elements['stock-search'].listeners.input();assert.equal(s.elements['stock-options'].children.length,2);
+ s.elements['stock-search'].value='aa';s.elements['stock-search'].listeners.input();assert.equal(s.elements['stock-options'].children.length,1);assert.equal(s.requests.length,1);
+ s.elements['stock-reset-filters'].listeners.click();assert.equal(s.elements['stock-options'].children.length,3);assert.equal(s.requests.length,1);
+});
+
+test('fresh-history checkbox changes only an explicit analysis request',async()=>{
+ const s=setup();s.elements['stock-results'].textContent='Previous analysis';s.elements['stock-options'].value='selected';s.elements['stock-refresh'].checked=true;s.elements['stock-refresh'].listeners.change?.();assert.equal(s.requests.length,0);assert.equal(s.elements['stock-results'].textContent,'Previous analysis');
+ const pending=s.elements['stock-form'].listeners.submit({preventDefault(){}});assert.match(s.requests[0].url,/refresh=true/);s.answer(0,{},503);await pending;assert.equal(s.requests.length,1);
 });
 
 test('stock setup errors give setup instructions without provider text',async()=>{
@@ -440,3 +454,9 @@ test('price labels retain small nonzero values and show unavailable values hones
  assert.equal(vm.runInNewContext('priceLabel(0.000000123456)',context),'$0.000000123456');
  assert.equal(vm.runInNewContext('priceLabel(null)',context),'N/A');
 });
+
+ test('stock listings load on page readiness without history or AI requests',async()=>{const s=setup();const p=s.documentEvents.DOMContentLoaded();assert.equal(s.requests.length,1);assert.match(s.requests[0].url,/v1.assets/);s.answer(0,{assets:[]});await p;assert.equal(s.requests.length,1);});
+
+test('rapid listing selections load only the latest queued chart and never AI',async()=>{const s=setup();const load=s.elements['stock-load'].listeners.click();s.answer(0,{assets:[{id:'a',name:'A',symbol:'A',exchange:'XNYS'},{id:'b',name:'B',symbol:'B',exchange:'XNYS'}]});await load;s.elements['stock-options'].value='a';const first=s.elements['stock-options'].listeners.change();s.elements['stock-options'].value='b';s.elements['stock-options'].listeners.change();assert.equal(s.requests.length,2);s.answer(1,{error:{}},503);await first;assert.equal(s.requests.length,3);assert.match(s.requests[2].url,/asset_id=b/);s.answer(2,{error:{}},503);await new Promise(r=>setImmediate(r));assert.equal(s.requests.length,3);});
+
+test('stock budget errors expose server retry time without starting a retry',async()=>{const context={document:{getElementById:()=>null},fetch:async()=>({ok:false,status:503,headers:{get:()=> '37'},json:async()=>({error:{code:'stock_budget'}})})};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/assets/common.js'),'utf8'),context);await assert.rejects(vm.runInNewContext("request('/v1/stock-analysis')",context),error=>error.retryAfterSeconds===37&&/Retry in 37 seconds/.test(error.message));});

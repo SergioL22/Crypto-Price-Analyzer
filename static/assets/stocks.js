@@ -2,7 +2,7 @@
 (() => {
  const kind = $("stock-kind"), search = $("stock-search"), select = $("stock-options");
  const status = $("stock-status"), result = $("stock-results"), load = $("stock-load"), run = $("stock-run"), days = $("stock-days");
- let assets = [], revision = 0, busy = false;
+ let assets = [], revision = 0, busy = false, pendingCatalog = false, pendingAnalysis = false;
  const requested = typeof URLSearchParams !== "undefined" && window.location ? new URLSearchParams(window.location.search).get("asset") : null;
  const filterToggle = $("filter-toggle"), filterPanel = $("stock-filters");
  filterToggle?.addEventListener("click", () => {
@@ -16,18 +16,22 @@
  function invalidate() { revision++; result.replaceChildren(); if($("stock-empty"))$("stock-empty").hidden=false; status.textContent = "Choose your listing and time range, then view its analysis."; }
  function filter() {
   const previous = select.value, term = search.value.trim().toLowerCase();
-  const matched = assets.filter(a => `${a.symbol} ${a.name} ${a.exchange}`.toLowerCase().includes(term) && (!$("stock-exchange")?.value || a.exchange === $("stock-exchange").value));
+  const exact=$("stock-query-mode")?.value==='ticker',order=$("stock-sort")?.value||'name';
+  const matched = assets.filter(a => (!term||(exact?a.symbol.toLowerCase()===term:`${a.symbol} ${a.name} ${a.exchange}`.toLowerCase().includes(term))) && (!$("stock-exchange")?.value || a.exchange === $("stock-exchange").value));
+  matched.sort((a,b)=>String(a[order]||a.name).localeCompare(String(b[order]||b.name))||a.name.localeCompare(b.name)||a.exchange.localeCompare(b.exchange));
   select.replaceChildren();
   const placeholder = el("option", matched.length ? "Choose a company or fund" : assets.length ? "No matching companies or funds" : "Load the list to browse");
   placeholder.value = ""; placeholder.disabled = true; select.append(placeholder);
   for (const a of matched) { const option = el("option", `${a.name} (${a.symbol}) · ${a.exchange} · ${a.currency}`); option.value = a.id; select.append(option); }
   select.value = matched.some(a => a.id === previous) ? previous : "";
-  $("stock-matches").textContent = assets.length ? `${matched.length} of ${assets.length} supported listings. All matches are available in the dropdown, sorted by name.` : "Load the company / fund list to browse by name.";
+  $("stock-matches").textContent = assets.length ? `${matched.length} of ${assets.length} supported listings. All matches are available in the dropdown, sorted by ${order}.` : "Load the company / fund list to browse by name.";
   run.disabled = busy || !select.value;
   if($("equity-save"))$("equity-save").disabled=busy||!select.value;
  }
- kind.addEventListener("change", () => { assets = []; invalidate(); filter(); });
+ kind.addEventListener("change", () => { assets = []; invalidate(); filter(); pendingCatalog = true; if (!busy) loadCatalog(); });
  $("stock-exchange")?.addEventListener("change", () => { invalidate(); filter(); });
+ for(const id of ['stock-query-mode','stock-sort'])$(id)?.addEventListener('change',()=>{invalidate();filter();});
+ $('stock-reset-filters')?.addEventListener('click',()=>{search.value='';for(const [id,value]of [['stock-exchange',''],['stock-query-mode','contains'],['stock-sort','name']])if($(id))$(id).value=value;invalidate();filter();});
  $("stock-period")?.addEventListener("change", () => {
   const period = $("stock-period").value;
   const parts = new Intl.DateTimeFormat("en-US", {timeZone:"America/New_York",year:"numeric",month:"numeric",day:"numeric"}).formatToParts(new Date());
@@ -36,29 +40,33 @@
   invalidate();
  });
  search.addEventListener("input", () => { invalidate(); filter(); });
- select.addEventListener("change", () => { invalidate(); run.disabled = busy || !select.value;if($("equity-save"))$("equity-save").disabled=busy||!select.value; }); days.addEventListener("input", invalidate);
- load.addEventListener("click", async () => {
+ select.addEventListener("change", () => { invalidate(); run.disabled = busy || !select.value;if($("equity-save"))$("equity-save").disabled=busy||!select.value; pendingAnalysis=true;if(!busy) return analyze(); }); days.addEventListener("input", invalidate);
+ async function loadCatalog() {
   if (busy) return;
-  invalidate(); const current = revision; busy = true; load.disabled = true; run.disabled = true;
+  pendingCatalog = false;
+  invalidate(); const current = revision, catalogKind=kind.value; busy = true; load.disabled = true; run.disabled = true;
   load.textContent="Loading listings…";load.setAttribute("aria-busy","true");status.textContent = "Loading supported listings…";
   try {
    const data = await request(`/v1/assets?asset_class=${encodeURIComponent(kind.value)}`);
-   if (current !== revision) return;
+   if (catalogKind !== kind.value) return;
    assets = [...data.assets].sort((a,b) => a.name.localeCompare(b.name) || a.symbol.localeCompare(b.symbol) || a.exchange.localeCompare(b.exchange)); filter();
-   if(requested && assets.some(a=>a.id===requested) && !search.value && !$("stock-exchange")?.value) select.value=requested;
+   if(requested && assets.some(a=>a.id===requested) && !search.value && !$("stock-exchange")?.value) {select.value=requested;pendingAnalysis=true;}
    status.textContent = `${assets.length} listings loaded${data.stale ? " from an older cached catalog" : ""}. Availability depends on your provider account.`;
-  } catch (error) { if (current === revision) status.textContent = error.message; }
-  finally { busy = false; load.disabled = false;load.textContent="Load listings";load.setAttribute("aria-busy","false"); filter(); }
- });
- $("stock-form").addEventListener("submit", async event => {
-  event.preventDefault(); if (busy || !select.value || !$("stock-form").reportValidity()) return;
+  } catch (error) { if (catalogKind === kind.value) status.textContent = error.message; }
+  finally { busy = false; load.disabled = false;load.textContent=assets.length ? "Reload listings" : "Retry loading listings";load.setAttribute("aria-busy","false"); filter(); if(pendingCatalog) loadCatalog();else if(pendingAnalysis) analyze(); }
+ }
+ load.addEventListener("click", loadCatalog);
+ async function analyze(event) {
+  event?.preventDefault(); pendingAnalysis=false; if (busy || !select.value || !$("stock-form").reportValidity()) return;
   const current = ++revision; busy = true; load.disabled = true; run.disabled = true;run.textContent="Loading analysis…";result.setAttribute("aria-busy","true"); result.replaceChildren(); status.textContent = "Loading completed trading sessions…";
   try {
-   const data = await request(`/v1/stock-analysis?asset_id=${encodeURIComponent(select.value)}&days=${encodeURIComponent(days.value)}`);
+   const data = await request(`/v1/stock-analysis?asset_id=${encodeURIComponent(select.value)}&days=${encodeURIComponent(days.value)}${$('stock-refresh')?.checked?'&refresh=true':''}`);
    if (current !== revision) return;
    result.append(el("h3", `${data.asset.name} (${data.asset.symbol}) · ${data.asset.exchange}`));
    const w = data.window;
+   if(data.history_source)result.append(el('p',data.history_source.cache_hit?'Recent history reused; no new provider history request.':'History fetched for this request.'));
    const notes=el("details");notes.append(el("summary","Data coverage and research limitations"),el("p", `${w.observations} of ${w.expected_sessions} completed sessions · ${w.start} to ${w.end} · USD · split-adjusted prices`));
+   if(data.history_source)notes.append(el('p',`Original history fetch: ${data.history_source.fetched_at_utc} · ${data.history_source.age_seconds}s old when requested. Cache reuse never means a live quote.`));
    if(w.missing_sessions.length) result.append(el("p", "Some requested trading days are missing. The chart shows available data; indicators may be unavailable. Expand data coverage below for details."));
    if(data.history.length) {
     const first=data.history[0],last=data.history.at(-1),cards=el("div");cards.className="summary-cards";
@@ -103,7 +111,9 @@
    if($("stock-empty"))$("stock-empty").hidden=true;
    status.textContent = `Analysis ready · latest available close ${data.history.at(-1)?.date || "unavailable"}. Historical prices, not a live quote.`;
   } catch (error) { if (current === revision) status.textContent = error.message; }
-  finally { busy = false; load.disabled = false;run.textContent="View analysis";result.setAttribute("aria-busy","false"); filter(); }
- });
+  finally { busy = false; load.disabled = false;run.textContent="Update analysis";result.setAttribute("aria-busy","false"); filter(); if(pendingCatalog) loadCatalog();else if(pendingAnalysis) analyze(); }
+ }
+ $("stock-form").addEventListener("submit", analyze);
  filter();
+ document.addEventListener?.("DOMContentLoaded", loadCatalog, {once:true});
 })();

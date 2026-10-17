@@ -36,7 +36,7 @@
   try{if(localStorage.getItem(key)!==restore.before)throw Error();save(restore.data);restore=null;$("equity-restore-apply").disabled=true;say("Stock workspace restored in this browser.");}catch{say("Workspace changed or storage is unavailable. Preview again before restoring.");}
  });
  const say = text => { const node = $("equity-status") || $("equity-save-status"); if(node) node.textContent=text; };
- function change(fn) { try { const data=read(); fn(data); save(data); render(); $("equity-valuation")?.replaceChildren(); say("Stock workspace saved in this browser."); } catch { say("Could not save the stock workspace. Existing data was not intentionally replaced; check browser storage permissions."); } }
+ function change(fn) { try { const data=read(); fn(data); save(data); render(); if(monitorStart){if(monitoring)stopMonitoring("Workspace changed. Restart monitoring to use the updated rules.");observations.clear();drawMonitoring();} $("equity-valuation")?.replaceChildren(); say("Stock workspace saved in this browser."); } catch { say("Could not save the stock workspace. Existing data was not intentionally replaced; check browser storage permissions."); } }
  function label(data,id) { return data.listings.find(a=>a.id===id)?.name || id; }
  function render() {
   const container=$("equity-list");
@@ -113,7 +113,7 @@
     output.append(el("p",`${a.type} ${format(value)} on ${latest.date}: ${match?(a.triggered?"still matches":"NEW MATCH"):"condition not met"}.`));
     a.triggered=match;changed=true;
    }
-   if(changed)save(data);render();say("Check complete. Prices are completed-session values, not live quotes.");
+   if(changed)save(data);render();output.append(el("p",`Checked ${new Date().toISOString()} · history fetched ${research.history_source?.fetched_at_utc || "time unavailable"}.`));say("Check complete. Prices are completed-session values, not live quotes.");
   }catch(error){say(error.message);}finally{button.disabled=false;}
  });
  $("equity-value")?.addEventListener("click",async()=>{
@@ -129,6 +129,86 @@
    output.append(el("p",holding.cost>0?`Unrealized difference from entered cost: $${format((point.price-holding.cost)*holding.quantity)}. Excludes dividends, fees and taxes.`:"Average cost unknown; gain/loss is unavailable."));
   }catch(error){output.append(el("p",error.message));}finally{button.disabled=false;}
  });
+
+ // Monitoring is opt-in, foreground-only, and serial. A browser-wide lease
+ // prevents multiple open pages from multiplying the automatic request rate.
+ const monitorStart=$('equity-monitor-start'),monitorStop=$('equity-monitor-stop');
+ const monitorStatus=$('equity-monitor-status'),monitorResults=$('equity-monitor-results');
+ const leaseKey='research-desk.monitor-attempt.v1';
+ let monitoring=false,monitorBusy=false,monitorTimer=null,monitorIndex=0,monitorGeneration=0;
+ const observations=new Map();
+ function monitorMessage(text){if(monitorStatus)monitorStatus.textContent=text;}
+ function stopMonitoring(message='Monitoring stopped. Saved rules remain available.'){
+  monitoring=false;monitorGeneration++;if(monitorTimer!==null)clearTimeout(monitorTimer);monitorTimer=null;
+  if(monitorStart)monitorStart.disabled=false;if(monitorStop)monitorStop.disabled=true;
+  if(message)monitorMessage(message);
+ }
+ function drawMonitoring(){
+  try {
+  if(!monitorResults)return;monitorResults.replaceChildren();
+  const data=read();for(const listing of data.listings){
+   const observation=observations.get(listing.id),row=el('li');
+   row.append(el('strong',listing.name));
+   if(!observation)row.append(el('p','Not checked on this page yet.'));
+   else {
+    const price=el('p',`${priceLabel(observation.price)} · close ${observation.session}`);price.className='monitor-price';
+    row.append(price,el('p',`Checked ${new Date(observation.checked).toLocaleString()} (your local time).`));
+    const freshness=el('details');freshness.append(el('summary','Data freshness'),el('p',`Checked ${observation.checked} · history fetched ${observation.fetched || 'time unavailable'}.`));row.append(freshness);
+    for(const text of observation.matches)row.append(el('p',text));
+    if(observation.error)row.append(el('p',observation.error));
+   }
+   const target=el('a','Set a target price or RSI alert');target.href=`/alerts.html?asset=${encodeURIComponent(listing.id)}`;row.append(target);monitorResults.append(row);
+  }
+  }catch(error){monitorMessage(error.message);}
+ }
+ async function monitorNext(){
+  if(!monitoring||monitorBusy||document.hidden)return;
+  monitorBusy=true;const generation=monitorGeneration;let before,data,id,attempted=false;
+  try {
+   before=localStorage.getItem(key);data=read();
+   if(!data.listings.length){stopMonitoring('Save a stock or ETF to your watchlist first.');return;}
+   const claim=()=>{const last=Number(localStorage.getItem(leaseKey)||0),now=Date.now();const wait=Number.isFinite(last)&&last<=now?Math.max(0,60000-(now-last)):0;if(!wait)localStorage.setItem(leaseKey,String(now));return wait;};
+   const wait=typeof navigator!=='undefined'&&navigator.locks?await navigator.locks.request('research-desk.monitor-slot',claim):claim();
+   if(!monitoring||generation!==monitorGeneration||document.hidden)return;
+   if(wait>0){monitorMessage('Waiting for the next check; another page checked recently.');monitorTimer=setTimeout(monitorNext,wait);return;}
+   id=data.listings[monitorIndex++%data.listings.length].id;
+   attempted=true;
+   monitorMessage(`Checking ${label(data,id)}. Other listings wait their turn.`);
+   const research=await request(`/v1/stock-analysis?asset_id=${encodeURIComponent(id)}&days=90`);
+   if(!monitoring||generation!==monitorGeneration||document.hidden)return;
+   if(localStorage.getItem(key)!==before)throw Error('Watchlist or rules changed during the check. Restart monitoring to use the updated workspace.');
+   const latest=research.history.at(-1);
+   if(!latest||!Number.isFinite(latest.price)||latest.price<=0||latest.date!==research.window.latest_closed_session)throw Error('Latest completed-session price is unavailable. Saved alert states were retained.');
+   const matches=[];let changed=false;
+   for(const rule of data.alerts.filter(a=>a.id===id)){
+    const value=rule.type==='price'?latest.price:research.indicators?.rsi_14;
+    if(!Number.isFinite(value)){matches.push(`${rule.type}: unavailable; saved state retained.`);continue;}
+    const match=rule.direction==='above'?value>rule.threshold:value<rule.threshold;
+    matches.push(`${rule.type} ${rule.direction} ${format(rule.threshold)}: ${match?(rule.triggered?'Still matches':'NEW MATCH'):'Target not reached'} (${format(value)}).`);
+    rule.triggered=match;changed=true;
+   }
+   if(!matches.length)matches.push('No target rules saved for this listing.');
+   if(changed)save(data);
+   observations.set(id,{price:latest.price,session:latest.date,checked:new Date().toISOString(),fetched:research.history_source?.fetched_at_utc,matches});
+   render();drawMonitoring();monitorMessage('Check complete. Next listing in one minute. Prices are historical closes, not live quotes.');
+  }catch(error){
+   if(generation===monitorGeneration){stopMonitoring(`Monitoring stopped: ${error.message} Retry manually after the provider is available. Previous successful checks remain visible.`);}
+  }finally{
+   monitorBusy=false;if(attempted&&monitoring&&generation===monitorGeneration)monitorTimer=setTimeout(monitorNext,60000);
+  }
+ }
+ monitorStart?.addEventListener('click',()=>{
+  if(monitoring||monitorBusy)return;monitoring=true;monitorGeneration++;monitorStart.disabled=true;monitorStop.disabled=false;return monitorNext();
+ });
+ monitorStop?.addEventListener('click',()=>stopMonitoring());
+ document.addEventListener?.('visibilitychange',()=>{if(document.hidden&&monitoring)stopMonitoring('Monitoring stopped because this page is hidden. Press Start monitoring when you return.');});
+ window.addEventListener('pagehide',()=>stopMonitoring(''));
+ window.addEventListener('storage',event=>{if(event.key===key||event.key===null){if(monitoring)stopMonitoring('Workspace changed in another page. Restart monitoring to use it.');observations.clear();drawMonitoring();}});
+ if(monitorStart)drawMonitoring();
  window.addEventListener("storage",event=>{if(event.key===key||event.key===null){render();$("equity-valuation")?.replaceChildren();}});
  render();
+ const requestedListing=typeof URLSearchParams!=='undefined'&&window.location?new URLSearchParams(window.location.search).get('asset'):null;
+ if(valid(requestedListing)&&$('equity-alert-listing')){
+  try{if(read().listings.some(a=>a.id===requestedListing))$('equity-alert-listing').value=requestedListing;}catch{say('Saved watchlist could not be read.');}
+ }
 })();

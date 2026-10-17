@@ -88,3 +88,15 @@ def test_managed_factory_cannot_enable_private_live_adapter(tmp_path):
 
 def test_disabled_market_adapter_has_no_provider_fallback():
     with pytest.raises(AccountError,match='market_not_enabled'):DisabledResearch().catalog('stock')
+
+
+def test_interactive_budget_returns_retry_after_for_signed_in_research(app,monkeypatch):
+    from stock_service import StockService
+    from stock_provider import StockDataError
+    client=login(app)
+    asset=client.get('/v2/research/assets?kind=stock').json()['assets'][0]['id']
+    def limited(*args,**kwargs):raise StockDataError('stock_budget','Wait for history budget',retry_after_seconds=23)
+    monkeypatch.setattr(StockService,'research',limited)
+    response=client.get('/v2/research/analysis',params={'kind':'stock','asset_id':asset,'days':90})
+    assert response.status_code==429 and response.headers['Retry-After']=='23'
+    assert response.json()['error']['code']=='stock_budget'

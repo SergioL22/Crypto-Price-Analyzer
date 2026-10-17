@@ -1,9 +1,9 @@
-# Research workspace polish
+# Professional presentation refresh
 
-The stock starting state now explains the three-step flow: load listings, choose an asset, explore history. It disappears after a successful analysis and returns when the selection changes. Exchange filters display readable venue names. Saving to the watchlist is disabled until a listing is selected.
+A shared final stylesheet gives the existing local and account pages a neutral charcoal palette, restrained blue actions, consistent borders and spacing, readable typography and quieter secondary controls. The main stock explorer groups Update analysis and Save to watchlist together. Prices remain prominent and advanced chart/indicator details remain expandable. Reload listings is presented as a secondary text action. The original stock and crypto navigation and responsive layouts remain available.
 
-Loading controls expose busy states and restore their labels after success or failure. Historical closing prices include their observation date and are distinguished from live quotes. Window returns have a prominent signed value, with color as a secondary cue. Exact indicator tables separate names, values and explanations; horizontal scrolling stays inside the table. Comparison and Settings headings match their navigation labels.
+Keyboard focus stays visible, controls retain 44-pixel touch targets, and reduced-motion preferences are respected. Phone navigation scrolls within its own row. No external fonts, tracking, fabricated market statistics or new provider/AI requests were added. Data calculations, account authorization and prediction protocols are unchanged.
 
-A collapsed prediction-research explanation summarizes Phase 4's lack of consistent advantage over always-up yearly baselines. It does not show a validated forecast, accuracy promise or stock recommendation.
+Verification: 124 existing frontend tests pass. Synthetic-provider browser checks covered desktop analysis, 390-pixel price cards, mobile filters and the stock watchlist. Preview screenshots contain synthetic sample prices. The refresh changes presentation and labels, so the unchanged Python analysis suite was not rerun for this styling step.
 
-Validation: 85 frontend tests passed, including a new failed-load recovery test that verifies no automatic retry. Browser checks used the isolated sample-data preview, not live providers. Stocks, Crypto, Compare, Watchlist, Portfolio, Alerts and Settings fit the narrow viewport without page overflow; no JavaScript console errors were observed. Portfolio saves, backups, alerts and paid AI calls were not exercised in the preview. Python/model behavior is unchanged by this polish.
+After installation, restart the local app if needed and hard-refresh the page to replace cached CSS. Source changes remain uncommitted and the checked installer preserves versioned backups.

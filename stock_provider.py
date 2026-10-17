@@ -7,9 +7,10 @@ from assets import Asset, US_EQUITY_MICS
 
 
 class StockDataError(Exception):
-    def __init__(self, code, message):
+    def __init__(self, code, message, *, retry_after_seconds=None):
         super().__init__(message)
         self.code = code
+        self.retry_after_seconds = retry_after_seconds
 
 
 class TwelveData:
