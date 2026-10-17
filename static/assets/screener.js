@@ -9,7 +9,7 @@
   $("screen-list").replaceChildren();
   for(const a of selected){const row=el("li",a.name),remove=el("button","Remove");remove.type="button";remove.disabled=busy;remove.addEventListener("click",()=>{selected.splice(selected.indexOf(a),1);rows.length=0;output.replaceChildren();render();});row.append(remove);$("screen-list").append(row);}
   const order=$("screen-order").value;
-  const ranked=rows.filter(r=>!r.unavailable).sort((a,b)=>b[order]-a[order]);
+  const ranked=rows.filter(r=>!r.unavailable).sort((a,b)=>order==='worst_ytd'?a.ytd_return-b.ytd_return:b[order]-a[order]);
   output.replaceChildren();
   for(const [index,row] of ranked.entries()) output.append(el("p",`${index+1}. ${row.name} · YTD price return ${(row.ytd_return*100).toFixed(2)}% · average daily volume ${format(row.average_volume)} shares · close $${format(row.price)} · through ${row.as_of}`));
   for(const row of rows.filter(r=>r.unavailable))output.append(el("p",`${row.name}: ${row.unavailable}`));

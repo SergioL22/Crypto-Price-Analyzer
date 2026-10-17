@@ -22,7 +22,7 @@ test('stock workspace keeps stock tools visible and stock links unscoped',()=>{
  assert.equal(s.sections[0].hidden,false);assert.equal(s.sections[1].hidden,true);
  assert.equal(s.pages[1].attrs.href,'/portfolio.html');
  assert.equal(s.markets[0].attrs['aria-current'],'page');
- assert.equal(s.heading.textContent,'Stocks & ETFs · Portfolio');
+ assert.equal(s.heading.textContent,'Investment Simulator');
 });
 test('crypto workspace preserves market across tool navigation',()=>{
  const s=run('/portfolio.html?market=crypto');

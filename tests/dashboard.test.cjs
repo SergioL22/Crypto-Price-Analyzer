@@ -473,3 +473,5 @@ test('failed catalog loads have a visible manual retry even when Filters is clos
 test('Compare selections never start a hidden standalone analysis request',async()=>{const s=setup();s.setView('compare');const p=s.elements['stock-load'].listeners.click();s.answer(0,{assets:[{id:'a',name:'Alpha',symbol:'A',exchange:'XNYS'}]});await p;s.elements['stock-options'].value='a';await s.elements['stock-options'].listeners.change();s.elements['stock-period'].value='30';await s.elements['stock-period'].listeners.change();await s.elements['stock-form'].listeners.submit({preventDefault(){}});assert.equal(s.requests.length,1);});
 
 require('./company-profile.test.cjs');
+
+require('./research-tools.test.cjs');

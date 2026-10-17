@@ -1,0 +1,16 @@
+# Private stock-research preview. No database or paid service is provisioned.
+services:
+  - type: web
+    name: research-desk-preview
+    runtime: docker
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: HOSTED_PREVIEW_PASSWORD
+        generateValue: true
+      - key: TWELVE_DATA_API_KEY
+        sync: false

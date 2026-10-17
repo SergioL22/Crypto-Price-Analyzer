@@ -25,6 +25,11 @@
   const description = document.querySelector("header > p:not(.eyebrow)");
   if(description) description.textContent = `Your ${isCrypto ? "crypto" : "stock and ETF"} workspace. Open Explore to research an asset, or manage your saved items here.`;
  }
+ if(!isCrypto && window.location.pathname === "/portfolio.html") {
+  if(heading)heading.textContent="Investment Simulator";
+  const description=document.querySelector("header > p:not(.eyebrow)");
+  if(description)description.textContent="Explore hypothetical investments using historical prices. No money moves and no trades are placed.";
+ }
  if(compare) {
   if(heading)heading.textContent="Compare stocks & ETFs";
   const description=document.querySelector("header > p:not(.eyebrow)");

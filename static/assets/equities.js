@@ -11,12 +11,12 @@
  function validate(data) {
   if (data.version !== 1 || !Array.isArray(data.listings) || !Array.isArray(data.holdings) || !Array.isArray(data.alerts) ||
       data.listings.length > 50 || data.holdings.length > 50 || data.alerts.length > 50 ||
-      !data.listings.every(a=>valid(a.id) && typeof a.name === "string" && a.name.length <= 500) ||
+      !data.listings.every(a=>valid(a.id) && typeof a.name === "string" && a.name.length <= 500 && (a.saved_on===undefined || (typeof a.saved_on==="string" && /^\d{4}-\d{2}-\d{2}$/.test(a.saved_on) && Number.isFinite(Date.parse(a.saved_on)) && new Date(a.saved_on).toISOString().slice(0,10)===a.saved_on && a.saved_on<=new Date().toISOString().slice(0,10)))) ||
       new Set(data.listings.map(a=>a.id)).size !== data.listings.length ||
       !data.holdings.every(h=>valid(h.id) && Number.isFinite(h.quantity) && h.quantity > 0 && Number.isFinite(h.cost) && h.cost >= 0) ||
       new Set(data.holdings.map(a=>a.id)).size !== data.holdings.length ||
       !data.alerts.every(a=>valid(a.id) && ["price","rsi"].includes(a.type) && ["above","below"].includes(a.direction) && Number.isFinite(a.threshold) && a.threshold >= 0 && (a.type !== "rsi" || a.threshold <= 100) && typeof a.triggered === "boolean")) throw new Error("Saved stock workspace is invalid; existing data has been preserved.");
-  return {version:1,listings:data.listings.map(({id,name})=>({id,name})),holdings:data.holdings.map(({id,quantity,cost})=>({id,quantity,cost})),alerts:data.alerts.map(({id,type,direction,threshold,triggered})=>({id,type,direction,threshold,triggered}))};
+  return {version:1,listings:data.listings.map(({id,name,saved_on})=>saved_on===undefined?{id,name}:{id,name,saved_on}),holdings:data.holdings.map(({id,quantity,cost})=>({id,quantity,cost})),alerts:data.alerts.map(({id,type,direction,threshold,triggered})=>({id,type,direction,threshold,triggered}))};
  }
  function save(data) { localStorage.setItem(key, JSON.stringify(data)); }
  let restore=null;
@@ -47,7 +47,7 @@
     const row=el("li"), open=el("a",a.name), remove=el("button","Remove from watchlist");
     open.href=`/stocks.html?asset=${encodeURIComponent(a.id)}`;
     remove.type="button"; remove.addEventListener("click",()=>change(d=>{d.listings=d.listings.filter(x=>x.id!==a.id);}));
-    row.append(open,remove);container.append(row);
+    row.append(open,remove);if(typeof watchPerformancePanel==='function')watchPerformancePanel(row,a,()=>read().listings.find(x=>x.id===a.id),()=>change(d=>{const current=d.listings.find(x=>x.id===a.id);if(current&&!current.saved_on)current.saved_on=new Date().toISOString().slice(0,10);}));container.append(row);
    }
    if(!data.listings.length) {const item=el("li","Your watchlist is empty. "),link=el("a","Explore companies and funds");link.href="/";item.className="empty-state";item.append(link);container.append(item);}
    for(const selectId of ["equity-holding","equity-alert-listing"]) {
@@ -76,7 +76,7 @@
   const option=Array.from(select.options).find(o=>o.value===id);
   try { const data=read();if(data.listings.some(a=>a.id===id)){say("Already saved to your watchlist.");return;}
    if(data.listings.length>=50){say("Watchlist full: remove a listing first.");return;}
-   data.listings.push({id,name:option.textContent});save(data);say("Saved to your stock and ETF watchlist in this browser.");
+   data.listings.push({id,name:option.textContent,saved_on:new Date().toISOString().slice(0,10)});save(data);say("Saved to your stock and ETF watchlist in this browser.");
   }catch{say("Watchlist could not be saved. Check browser storage permissions.");}
  });
  $("equity-holding")?.addEventListener("change",()=>{try{$("equity-valuation")?.replaceChildren();const h=read().holdings.find(x=>x.id===$("equity-holding").value);$("equity-quantity").value=h?.quantity??"";$("equity-cost").value=h?.cost??"";}catch{say("Saved holdings could not be read.");}});

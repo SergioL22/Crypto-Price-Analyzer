@@ -64,3 +64,23 @@ test('monitor waits for shared cooldown and uses the current watchlist',async()=
 test('monitor discards checks when rules were edited during a request',async()=>{const s=setup('equities.js',monitorWorkspace());const p=s.e['equity-monitor-start'].listeners.click();const data=s.data();data.alerts[0].threshold=999;s.storage.set(key,JSON.stringify(data));s.answer(0,closeData());await p;assert.equal(s.data().alerts[0].threshold,999);assert.equal(s.data().alerts[0].triggered,false);assert.match(s.e['equity-monitor-status'].textContent,/changed/);});
 
 test('monitor rotates through listings serially and retains unavailable RSI state',async()=>{const workspace=monitorWorkspace(),second=id.replace(':ABC',':XYZ');workspace.listings.push({id:second,name:'Second'});workspace.alerts.push({id:second,type:'rsi',direction:'below',threshold:30,triggered:true});const s=setup('equities.js',workspace);let p=s.e['equity-monitor-start'].listeners.click();s.answer(0,closeData());await p;s.advance(60000);p=s.timers.at(-1).fn();assert.match(s.requests[1].url,/XYZ/);s.answer(1,closeData());await p;assert.equal(s.data().alerts[1].triggered,true);assert.match(s.e['equity-monitor-results'].textContent,/unavailable; saved state retained/);});
+
+
+test('new saves record a UTC date without resetting existing watchlist dates',()=>{
+ const s=setup('equities.js',{version:1,listings:[],holdings:[],alerts:[]});s.e['equity-save'].listeners.click();
+ const date=s.data().listings[0].saved_on;assert.equal(date,new Date(s.context.Date.now()).toISOString().slice(0,10));
+ s.advance(86400000);s.e['equity-save'].listeners.click();assert.equal(s.data().listings[0].saved_on,date);
+});
+test('watchlist metadata survives unrelated edits and invalid saved dates preserve storage',()=>{
+ const initial={version:1,listings:[{id,name:'Example',saved_on:'2026-10-01'}],holdings:[],alerts:[]};const s=setup('equities.js',initial);
+ s.e['equity-holding'].value=id;s.e['equity-quantity'].value='1';s.e['equity-cost'].value='20';s.e['equity-holding-form'].listeners.submit({preventDefault(){}});
+ assert.equal(s.data().listings[0].saved_on,'2026-10-01');
+ const invalid={...initial,listings:[{id,name:'Bad',saved_on:'2026-02-30'}]};const bad=setup('equities.js',invalid),before=bad.storage.get(key);bad.e['equity-save'].listeners.click();assert.equal(bad.storage.get(key),before);
+});
+test('comparison offers ascending YTD performance only within the chosen list',async()=>{
+ const s=setup('screener.js');s.e['screen-order'].value='worst_ytd';s.e['screen-add'].listeners.click();
+ const second=new E();second.value=id.replace('ABC','XYZ');second.textContent='Second';s.e['stock-options'].append(second);s.e['stock-options'].value=second.value;s.e['screen-add'].listeners.click();
+ const year=new Date().getFullYear(),data=close=>({bars:[{date:`${year-1}-12-31`,close:100,volume:100},{date:`${year}-01-02`,close,volume:100}],window:{complete:true,latest_closed_session:`${year}-01-02`}});
+ const pending=s.e['screen-run'].listeners.click();s.answer(0,data(110));await new Promise(r=>setImmediate(r));s.answer(1,data(90));await pending;
+ assert.match(s.e['screen-results'].children[0].textContent,/Second/);assert.match(s.e['screen-status'].textContent,/not a whole-market/);
+});

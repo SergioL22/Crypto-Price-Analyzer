@@ -1,6 +1,7 @@
 """Validated account workspace and explicit migration contracts."""
 from typing import Annotated, Literal
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from datetime import date, datetime, timezone
+from pydantic import BaseModel, ConfigDict, Field, model_validator, model_serializer
 
 AssetId=Annotated[str,Field(strict=True,pattern=r'^twelvedata:(stock|etf):(XNYS|XNAS|XNGS|XNMS|XNCM|ARCX|XASE|BATS):USD:[A-Za-z0-9.^_-]{1,100}$')]
 Number=Annotated[float,Field(strict=True,allow_inf_nan=False,ge=0)]
@@ -13,6 +14,20 @@ class Contract(BaseModel):
 class Listing(Contract):
     id:AssetId
     name:Annotated[str,Field(strict=True,min_length=1,max_length=500)]
+    saved_on:Annotated[str,Field(strict=True,pattern=r'^\d{4}-\d{2}-\d{2}$')]|None=None
+
+    @model_validator(mode='after')
+    def saved_date(self):
+        if self.saved_on is not None:
+            parsed=date.fromisoformat(self.saved_on)
+            if parsed.isoformat()!=self.saved_on or parsed>datetime.now(timezone.utc).date():raise ValueError('Invalid save date')
+        return self
+
+    @model_serializer(mode='wrap')
+    def serialize(self,handler):
+        value=handler(self)
+        if self.saved_on is None:value.pop('saved_on',None)
+        return value
 
 
 class Holding(Contract):

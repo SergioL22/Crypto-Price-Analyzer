@@ -69,3 +69,24 @@ jobs:
         run: python -c "import fastapi, httpx, account_backend, account_auth; from fastapi.testclient import TestClient; from backend import create_app; create_app()"
       - name: Run full offline test suite
         run: python -m pytest tests -q -ra --strict-markers --strict-config
+
+  hosted-container:
+    name: Hosted preview / container
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Build secret-free hosted image
+        run: docker build -t research-preview:test .
+      - name: Verify runtime startup and access boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name research-preview -p 127.0.0.1:10000:10000 -e HOSTED_ORIGIN=https://preview.example -e HOSTED_PREVIEW_PASSWORD=synthetic-container-test-password-only research-preview:test
+          trap 'docker rm -f research-preview >/dev/null' EXIT
+          curl --retry 12 --retry-connrefused --retry-delay 2 --fail http://127.0.0.1:10000/health
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: preview.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10000/)" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' -u preview:synthetic-container-test-password-only -H 'Host: preview.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10000/)" = 200
+          test "$(curl -s -o /dev/null -w '%{http_code}' -u preview:synthetic-container-test-password-only -H 'Host: preview.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10000/v1/holdings)" = 404

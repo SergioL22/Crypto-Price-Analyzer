@@ -36,7 +36,7 @@ function priceChart(parent, points, options = {}) {
  let selectedIndex=points.length-1,expanded=false,svg,marker,crossV,crossH,scaleX,scaleY,gesture=null,pinch=null;
  const pointers=new Map();
  const section=el('section');section.className='price-chart';section.setAttribute('tabindex','-1');
- section.append(el('h3','Price history · USD'));
+ section.append(el('h3',options.title||'Price history · USD'));
  const selected=el('p');selected.className='chart-selected';selected.setAttribute('aria-live','polite');
  const navigation=el('div');navigation.className='chart-navigation';const extraNavigation=el('div');extraNavigation.className='chart-navigation chart-navigation-extra';
  const button=(text,advanced=false)=>{const node=el('button',text);node.type='button';node.className='secondary';(advanced?extraNavigation:navigation).append(node);return node;};

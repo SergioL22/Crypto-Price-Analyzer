@@ -30,3 +30,15 @@ button,.button{background:#99b6ff;color:#111b32;border:1px solid #99b6ff;border-
 .result-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--line);padding-top:18px;margin:20px 0 16px}.result-heading h3{margin:0;font-size:1.15rem;line-height:1.4}.result-heading a{font-size:.78rem;white-space:nowrap}#stock-results{scroll-margin-top:24px}@media(max-width:480px){.result-heading{align-items:start}.result-heading h3{font-size:1rem;max-width:70%}}
 
 .company-profile{margin-top:14px}.company-profile dl>div{display:flex;justify-content:space-between;gap:18px;padding:8px 0;border-bottom:1px solid var(--line)}.company-profile dd{margin:0;text-align:right;overflow-wrap:anywhere}.company-profile p{font-size:.76rem;line-height:1.6}.company-profile a{font-size:.8rem}.company-profile dt{font-size:.8rem}.company-profile dd{font-size:.8rem;color:#d1ddef}.listing-summary>button{margin:10px 0 0!important}@media(max-width:480px){.company-profile dl>div{display:block}.company-profile dd{text-align:left;margin-top:4px}}
+
+/* Make the simulator outcome readable before the chart and methodology. */
+#simulation-results .simulation-summary{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(0,1fr));gap:16px;margin:18px 0 22px}
+#simulation-results .simulation-metric{min-width:0;background:#191e28;border:1px solid #39465d;border-radius:12px;padding:22px}
+#simulation-results .simulation-final{background:#1b2639;border-color:#7298cf}
+#simulation-results .simulation-metric h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:#b9c7dc;margin:0 0 12px}
+#simulation-results .simulation-value{font-size:clamp(1.8rem,3.5vw,2.7rem);line-height:1.15;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;margin:0 0 10px;color:inherit}
+#simulation-results .simulation-final .simulation-value{font-size:clamp(2.6rem,5vw,4rem);color:#f5f7fc;letter-spacing:-.04em}
+#simulation-results .simulation-percent{font-size:1.5rem;font-weight:650;color:inherit;margin:0}
+#simulation-results .simulation-start{color:#e0e7f3}
+@media(max-width:800px){#simulation-results .simulation-summary{grid-template-columns:repeat(2,minmax(0,1fr))}#simulation-results .simulation-final{grid-column:1/-1}}
+@media(max-width:480px){#simulation-results .simulation-summary{grid-template-columns:minmax(0,1fr)}#simulation-results .simulation-metric{padding:18px}}
