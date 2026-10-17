@@ -318,3 +318,5 @@ The account workspace now includes explicit stock/ETF and crypto research, share
 A separate account factory adds managed OIDC integration, per-user server storage, revision-safe edits, explicit import previews and account exports. Try the loopback-only sample profiles using the [Phase 5 guide](PHASE5_COMPLETION.md). The original local research app remains on its own factory. Real hosted identity/database setup and market-display licensing are pending; the sample profiles must not be publicly exposed.
 
 See [Phase 8 local milestone](PHASE8_MILESTONE.md) for delivered features, validation and remaining release limits.
+
+See [Discovery and simplified research release](DISCOVERY_RELEASE.md) for the latest browsing and usability improvements.
