@@ -85,8 +85,23 @@ jobs:
         run: |
           set -euo pipefail
           docker run -d --name research-preview -p 127.0.0.1:10000:10000 -e HOSTED_ORIGIN=https://preview.example -e HOSTED_PREVIEW_PASSWORD=synthetic-container-test-password-only research-preview:test
-          trap 'docker rm -f research-preview >/dev/null' EXIT
-          curl --retry 12 --retry-connrefused --retry-delay 2 --fail http://127.0.0.1:10000/health
+          trap 'docker logs research-preview; docker rm -f research-preview >/dev/null' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            if curl --silent --show-error --fail --max-time 2 http://127.0.0.1:10000/health; then
+              ready=1
+              break
+            fi
+            if [ "$(docker inspect --format '{{.State.Running}}' research-preview)" != true ]; then
+              echo 'Hosted container exited before readiness.'
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ "$ready" != 1 ]; then
+            echo 'Hosted container did not become ready within the startup window.'
+            exit 1
+          fi
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: preview.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10000/)" = 401
           test "$(curl -s -o /dev/null -w '%{http_code}' -u preview:synthetic-container-test-password-only -H 'Host: preview.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10000/)" = 200
           test "$(curl -s -o /dev/null -w '%{http_code}' -u preview:synthetic-container-test-password-only -H 'Host: preview.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10000/v1/holdings)" = 404
