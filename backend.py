@@ -16,6 +16,7 @@ from backend_models import HoldingUpdate, HoldingRemoval, SavedHoldingsResponse
 from backend_models import RestorePreviewRequest, RestoreRequest
 from backend_models import AlertCreate, AlertChange
 from stock_models import AssetCatalog, StockResearch
+from profile_models import CompanyProfileResponse
 from local_config import load_local_config
 
 
@@ -131,6 +132,10 @@ def create_app(service=None, *, allowed_origin=None):
     @app.get('/v1/assets', response_model=AssetCatalog, responses=errors)
     def asset_catalog(asset_class: Literal['crypto', 'stock', 'etf'] = 'stock'):
         return service.asset_catalog(asset_class)
+
+    @app.get('/v1/company-profile',response_model=CompanyProfileResponse,responses=errors)
+    def company_profile(asset_id:Annotated[str,Query(min_length=1,max_length=160)]):
+        return service.company_profile(asset_id)
 
     @app.get('/v1/stock-analysis', response_model=StockResearch, responses=errors)
     def stock_research(asset_id: Annotated[str, Query(min_length=1, max_length=160)],

@@ -79,6 +79,12 @@ class BackendService:
         except StockDataError as error:
             raise BackendError(503, error.code, str(error)) from None
 
+    def company_profile(self,asset_id):
+        try:
+            with self.market_gate.enter():return self.stocks.company_profile(asset_id,self.now())
+        except StockDataError as error:
+            raise BackendError(404 if error.code=='stock_not_found' else 429 if error.code=='profile_rate_limited' else 503,error.code,str(error),retry_after_seconds=error.retry_after_seconds) from None
+
     def stock_research(self, asset_id, days,*,refresh=False):
         try:
             with self.market_gate.enter():

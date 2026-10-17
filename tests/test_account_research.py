@@ -100,3 +100,14 @@ def test_interactive_budget_returns_retry_after_for_signed_in_research(app,monke
     response=client.get('/v2/research/analysis',params={'kind':'stock','asset_id':asset,'days':90})
     assert response.status_code==429 and response.headers['Retry-After']=='23'
     assert response.json()['error']['code']=='stock_budget'
+
+
+def test_company_profiles_require_login_and_sample_accounts_never_call_live_profiles(app,monkeypatch):
+    from company_profiles import CompanyProfiles
+    monkeypatch.setattr(CompanyProfiles,'load',lambda *a,**k:pytest.fail('Sample must not call live profiles'))
+    anonymous=TestClient(app,base_url=ORIGIN,client=('127.0.0.1',50000))
+    assert anonymous.get('/v2/research/company-profile?asset_id=anything').status_code==401
+    client=login(app);asset=client.get('/v2/research/assets?kind=stock').json()['assets'][0]['id']
+    response=client.get('/v2/research/company-profile',params={'asset_id':asset})
+    assert response.status_code==200 and response.json()['status']=='not_supported'
+    assert response.json()['profile'] is None

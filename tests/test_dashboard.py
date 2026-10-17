@@ -65,7 +65,11 @@ def test_each_page_has_its_own_section_and_shared_navigation(path, section):
     for other in sections:
         if other != section:
             assert f'id="{other}"' not in response.text
+    if path != "/crypto.html":
+        assert 'href="/crypto.html"' not in response.text
     for target in paths:
+        if target == "/crypto.html" and path != target:
+            continue
         assert f'href="{target}"' in response.text
     assert f'href="{path}" aria-current="page"' in response.text
     assert "frame-ancestors 'none'" in response.headers['content-security-policy']
@@ -81,7 +85,7 @@ def test_static_assets_and_routes_from_other_directory(tmp_path, monkeypatch):
         for asset in ('dashboard.js','dashboard.css'):
             assert client.get('/assets/' + asset).status_code == 200
         assert client.get('/health').json() == {'status':'ok'}
-        assert len(client.get('/openapi.json').json()['paths']) == 16
+        assert len(client.get('/openapi.json').json()['paths']) == 17
         for path in ('/assets/%2e%2e/%2e%2e/backend.py', '/backend.py', '/crypto_data.db'):
             assert client.get(path).status_code == 404
     assert service.mock_calls == []

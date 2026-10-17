@@ -28,7 +28,9 @@ def session_window(days, now):
 
 
 class StockService:
-    def __init__(self, *, provider=None, clock=None, history_ttl=300, history_capacity=16, error_cooldown=60,history_request_limit=6,history_budget_window=60):
+    def __init__(self, *, provider=None, clock=None, history_ttl=300, history_capacity=16, error_cooldown=60,history_request_limit=6,history_budget_window=60,profiles=None):
+        from company_profiles import CompanyProfiles
+        self.profiles=profiles or CompanyProfiles()
         self.provider = provider or TwelveData()
         self.clock = clock or monotonic
         self.history_cache=HistoryCache(clock=self.clock,ttl=history_ttl,capacity=history_capacity,cooldown=error_cooldown,request_limit=history_request_limit,budget_window=history_budget_window)
@@ -57,6 +59,15 @@ class StockService:
                 raise StockDataError('stock_unavailable', 'Stock catalog is temporarily unavailable. Retry after one minute.')
             return dict(assets=[a.public() for a in self._assets], stale=stale, fetched_at_utc=self._fetched,
                         coverage='Supported US USD listings with explicit MICs. Catalog inclusion does not guarantee account access. Delisted coverage and permanent security identity are not available.')
+
+    def resolve_asset(self,asset_id,now):
+        self.catalog(now)
+        with self._lock:asset=next((a for a in self._assets if a.id==asset_id),None)
+        if asset is None:raise StockDataError('stock_not_found','Select a supported listing from the catalog.')
+        return asset
+
+    def company_profile(self,asset_id,now):
+        return self.profiles.load(self.resolve_asset(asset_id,now),now)
 
     def research(self, asset_id, days, now, *, use_cache=False,refresh=False):
         start, end, sessions = session_window(days, now)

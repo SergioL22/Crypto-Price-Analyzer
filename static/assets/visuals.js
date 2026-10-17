@@ -43,13 +43,15 @@ function priceChart(parent, points, options = {}) {
  const back=button('← Previous',true),next=button('Next →',true),latest=button('Latest',true),reset=button('Reset view',true),full=button('Fullscreen');
  const select=(label,entries,advanced=false)=>{const wrapper=el('label',label),node=el('select');for(const [value,text] of entries){const option=el('option',text);option.value=value;node.append(option);}node.value=entries[0][0];wrapper.append(node);(advanced?extraNavigation:navigation).append(wrapper);return node;};
  const range=select('Show',[['all','Full history'],['30','Last month'],['90','Last 3 months'],['365','Last year'],['custom','Custom view']]);
- const style=hasBars?select('Chart',[['line','Line'],['candles','Candlesticks']],true):null;
+ const style=hasBars?select('Chart type',[['line','Line'],['candles','Candlesticks']]):null;
  const plot=el('div');plot.className='chart-plot';plot.setAttribute('tabindex','0');plot.setAttribute('role','group');plot.setAttribute('aria-label','Interactive price chart. Arrow keys select dates; plus and minus zoom. Drag to pan, scroll or pinch to zoom.');
  const tooltip=el('p');tooltip.className='chart-tooltip';tooltip.hidden=true;
  const drawing=el('div');plot.append(drawing,tooltip);
  const volumePlot=el('div');volumePlot.className='chart-volume';
  const sliderLabel=el('label','Explore dates'),slider=el('input');slider.type='range';slider.step='1';slider.value=String(selectedIndex);sliderLabel.append(slider);
- const help=el('p','Drag to browse · scroll or pinch to zoom · tap a point for its price.');help.className='chart-help';
+ const help=el('p','Drag to browse · scroll or pinch to zoom · tap a point for its price.');
+ const candleDetails=el('p');candleDetails.className='chart-candle-details';
+ const candleGuide=el('p','Each candle shows one trading day. Body: open to close; wick: low to high. Green: close at or above open. Red: close below open.');candleGuide.className='chart-help';help.className='chart-help';
  const status=el('p');status.className='chart-note';status.setAttribute('role','status');
  const controls=el('div');controls.className='chart-controls';
  const toggle=text=>{const label=el('label'),input=el('input');input.type='checkbox';input.checked=false;label.append(input,el('span',text));controls.append(label);return input;};
@@ -62,6 +64,8 @@ function priceChart(parent, points, options = {}) {
   marker.setAttribute('cx',scaleX(p));marker.setAttribute('cy',scaleY(p.price));
   crossV.setAttribute('x1',scaleX(p));crossV.setAttribute('x2',scaleX(p));crossH.setAttribute('y1',scaleY(p.price));crossH.setAttribute('y2',scaleY(p.price));
   tooltip.textContent=`${p.date} · ${priceLabel(p.price)}`;
+  const candleMode=hasBars&&style?.value==='candles';candleDetails.hidden=!candleMode;candleGuide.hidden=!candleMode;
+  if(candleMode){const b=bars[index];const text=`${p.date} · Open ${priceLabel(b.open)} · High ${priceLabel(b.high)} · Low ${priceLabel(b.low)} · Close ${priceLabel(b.close)}`;tooltip.textContent=text;candleDetails.textContent=text;}
   if(announce){selectedIndex=index;slider.value=String(index);selected.textContent=`${p.date} ${options.sessions?'exchange close':'UTC sample'} · ${priceLabel(p.price)}`;slider.setAttribute('aria-valuetext',selected.textContent);back.disabled=index<=view.first;next.disabled=index>=view.last;
    readout.textContent=`${p.date} ${options.sessions?'exchange session':'UTC'} · Price $${format(p.price)} · MA7 ${format(p.ma_7)} · MA25 ${format(p.ma_25)} · Bands ${format(p.bollinger_lower)} / ${format(p.bollinger_middle)} / ${format(p.bollinger_upper)}`;
    if(hasBars){const b=bars[index];readout.append(el('span',` · Open ${priceLabel(b.open)} · High ${priceLabel(b.high)} · Low ${priceLabel(b.low)} · Close ${priceLabel(b.close)} · Volume ${format(b.volume)}`));}
@@ -124,5 +128,5 @@ function priceChart(parent, points, options = {}) {
   values.forEach(value=>row.append(el('td',value===null||value===undefined?'Unavailable':format(value))));table.append(row);
  }
  });
- tableDetails.className='chart-table';tableDetails.append(el('summary','Chart data table'),el('p',`${hasBars?'Open/high/low/close and share volume come from the loaded daily provider bars. Prices are split-adjusted; volume is not dollar turnover.':'Prices are daily samples, not OHLC candles.'} Change compares consecutive available observations and may span a data gap. MA7 and MA25 average 7 and 25 observations. Bollinger Bands describe variation around the 20-observation average; they are not predicted prices. Unavailable means the value was not supplied or there is insufficient usable history. The first observation has no prior return. All rows retain the original analysis window.`),table);tools.append(tableDetails);section.append(tools);parent.append(section);draw();
+ tableDetails.className='chart-table';tableDetails.append(el('summary','Chart data table'),el('p',`${hasBars?'Open/high/low/close and share volume come from the loaded daily provider bars. Prices are split-adjusted; volume is not dollar turnover.':'Prices are daily samples, not OHLC candles.'} Change compares consecutive available observations and may span a data gap. MA7 and MA25 average 7 and 25 observations. Bollinger Bands describe variation around the 20-observation average; they are not predicted prices. Unavailable means the value was not supplied or there is insufficient usable history. The first observation has no prior return. All rows retain the original analysis window.`),table);tools.append(tableDetails);section.append(candleDetails,candleGuide,tools);parent.append(section);draw();
 }

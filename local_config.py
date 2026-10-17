@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 DEFAULT_ENV_PATH = Path(__file__).resolve().parent / '.env'
-ALLOWED = frozenset(('TWELVE_DATA_API_KEY', 'OPENAI_API_KEY', 'OPENAI_MODEL'))
+ALLOWED = frozenset(('TWELVE_DATA_API_KEY', 'OPENAI_API_KEY', 'OPENAI_MODEL','FINNHUB_API_KEY'))
 
 
 def load_local_config(path=None):

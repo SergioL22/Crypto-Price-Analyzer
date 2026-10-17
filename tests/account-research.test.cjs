@@ -9,6 +9,7 @@ function setup(){const html=fs.readFileSync(path.join(__dirname,'../static/accou
  const document={getElementById:id=>elements[id],createElement:t=>new Element(t),addEventListener:(k,f)=>events[k]=f,dispatchEvent:e=>{sent.push(e);events[e.type]?.(e);}};
  const context={document,CustomEvent:class{constructor(type,o){this.type=type;this.detail=o?.detail;}},el:(t,v)=>{const n=new Element(t);if(v!==undefined)n.textContent=v;return n;},format:String,priceLabel:v=>'$'+v,priceChart:(root)=>root.append(new Element('chart')),fetch:(url,options)=>new Promise(resolve=>requests.push({url,options,resolve}))};
  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/assets/listing-discovery.js'),'utf8'),context);
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/assets/company-profile.js'),'utf8'),context);
  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/assets/account-research.js'),'utf8'),context);
  return{elements,requests,sent,session:(signedIn=true)=>events['account-session']({detail:{signedIn,mode:'sample'}}),answer:(i,data,status=200)=>requests[i].resolve({ok:status===200,status,json:async()=>data})};
 }

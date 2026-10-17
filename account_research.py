@@ -63,6 +63,14 @@ class Research:
             if kind=='crypto':return dict(assets=COINS,stale=False,coverage='Three starter coins. Crypto IDs are explicit; no market-wide ranking.')
             result=self.stocks.catalog(self.now());result['assets']=[a for a in result['assets'] if a['asset_class']==kind]
             return result
+    def company_profile(self,asset_id):
+        with self.gate.enter():
+            if self.sample:
+                from company_profiles import CompanyProfiles
+                asset=self.stocks.resolve_asset(asset_id,self.now())
+                return CompanyProfiles.unavailable(asset,'not_supported','Sample accounts do not request live company profiles.')
+            return self.stocks.company_profile(asset_id,self.now())
+
     def analyze(self,kind,asset_id,days,*,refresh=False):
         with self.gate.enter():
             now=self.now()
@@ -88,3 +96,4 @@ class DisabledResearch:
     mode='not_enabled'
     def catalog(self,*args):raise AccountError('market_not_enabled',503)
     def analyze(self,*args,**kwargs):raise AccountError('market_not_enabled',503)
+    def company_profile(self,*args):raise AccountError('market_not_enabled',503)

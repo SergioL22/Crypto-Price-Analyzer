@@ -44,6 +44,7 @@ function setup(storage = new Map()) {
  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../static/assets/restore.js'), 'utf8'),context);
  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../static/assets/alerts.js'), 'utf8'),context);
  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../static/assets/listing-discovery.js'), 'utf8'),context);
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../static/assets/company-profile.js'), 'utf8'),context);
  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../static/assets/stocks.js'), 'utf8'),context);
  const click=()=>elements.recommend.listeners.click();
  const analyze=()=>elements['analysis-form'].listeners.submit({preventDefault(){}});
@@ -108,7 +109,7 @@ test('stock scripts initialize independently without crypto elements or requests
  const ids=['stock-kind','stock-search','stock-options','stock-status','stock-results','stock-load','stock-run','stock-days','stock-matches','stock-form'];
  const elements=Object.fromEntries(ids.map(id=>[id,new Element()]));
  const context={Intl,document:{getElementById:id=>elements[id],createElement:tag=>new Element(tag)},fetch:()=>assert.fail('Unexpected request')};
- for(const file of ['common.js','visuals.js','listing-discovery.js','stocks.js']) vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/assets',file),'utf8'),context);
+ for(const file of ['common.js','visuals.js','listing-discovery.js','company-profile.js','stocks.js']) vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/assets',file),'utf8'),context);
  assert.equal(elements['stock-run'].disabled,true);
  assert.match(elements['stock-options'].children[0].textContent,/Load the list/);
 });
@@ -470,3 +471,5 @@ test('history range changes update analysis and coalesce to the latest selected 
 test('failed catalog loads have a visible manual retry even when Filters is closed',async()=>{const s=setup();let p=s.elements['stock-load'].listeners.click();s.answer(0,{error:{}},503);await p;assert.equal(s.elements['stock-retry'].hidden,false);p=s.elements['stock-retry'].listeners.click();assert.equal(s.elements['stock-retry'].hidden,true);s.answer(1,{assets:[]});await p;assert.equal(s.requests.length,2);});
 
 test('Compare selections never start a hidden standalone analysis request',async()=>{const s=setup();s.setView('compare');const p=s.elements['stock-load'].listeners.click();s.answer(0,{assets:[{id:'a',name:'Alpha',symbol:'A',exchange:'XNYS'}]});await p;s.elements['stock-options'].value='a';await s.elements['stock-options'].listeners.change();s.elements['stock-period'].value='30';await s.elements['stock-period'].listeners.change();await s.elements['stock-form'].listeners.submit({preventDefault(){}});assert.equal(s.requests.length,1);});
+
+require('./company-profile.test.cjs');

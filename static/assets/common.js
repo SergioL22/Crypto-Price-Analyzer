@@ -12,6 +12,10 @@ async function request(url, options) {
   const messages = {403: "Request origin is not allowed. Open the configured local address.", 422: "Check the coin, days, and position fields.", 429: "Server is busy. Try again later.", 502: "Market data is unavailable or invalid. Check the selected CoinGecko ID; the provider may also be temporarily unavailable.", 503: "History is insufficient or stale. Try a longer window or another coin; some coins do not have enough recent data.", 500: "An unexpected server error occurred."};
   const stockErrors = {
    stock_setup_required: "Set TWELVE_DATA_API_KEY on the server and restart it to enable stocks and ETFs.",
+   profile_rate_limited: "Company profile requests are temporarily limited. Retry manually later.",
+   profile_access: "Company profile access was rejected. Check FINNHUB_API_KEY on the server.",
+   profile_unavailable: "Company profiles are temporarily unavailable; price analysis is still available.",
+   profile_invalid: "The returned company profile could not be verified and was not displayed.",
    stock_budget: "Fresh history requests are temporarily limited. Wait before retrying; cached charts may still be available.",
    stock_quota: "Stock provider quota reached. Try again later; no automatic retry was made.",
    stock_access: "Stock provider rejected access. Check your server key and account entitlements.",

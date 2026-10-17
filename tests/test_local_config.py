@@ -48,3 +48,11 @@ def test_explicit_empty_environment_wins(tmp_path, monkeypatch):
     monkeypatch.setenv('TWELVE_DATA_API_KEY', '')
     load_local_config(path)
     assert os.environ['TWELVE_DATA_API_KEY'] == ''
+
+
+def test_optional_finnhub_key_is_literal_and_existing_environment_wins(tmp_path,monkeypatch):
+    monkeypatch.delenv('FINNHUB_API_KEY',raising=False)
+    path=tmp_path/'.env';path.write_text('FINNHUB_API_KEY=profile-placeholder\n',encoding='utf-8')
+    load_local_config(path);assert os.environ['FINNHUB_API_KEY']=='profile-placeholder'
+    monkeypatch.setenv('FINNHUB_API_KEY','terminal-placeholder')
+    load_local_config(path);assert os.environ['FINNHUB_API_KEY']=='terminal-placeholder'

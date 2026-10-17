@@ -15,8 +15,8 @@
  if(requested?.startsWith("twelvedata:etf:")) kind.value="etf";
  function invalidate() { revision++; result.replaceChildren(); if($("stock-empty"))$("stock-empty").hidden=false; status.setAttribute("data-state","idle");status.textContent = ""; }
  function renderListing(){
-  const root=$('stock-listing-summary');if(!root)return;const asset=assets.find(a=>a.id===select.value);root.replaceChildren();root.hidden=!asset;if(!asset)return;
-  const info=ListingDiscovery.describe(asset);root.append(el('summary','About this listing'),el('span',info.type),el('p',info.text));
+  const root=$('stock-listing-summary');if(!root)return;const asset=assets.find(a=>a.id===select.value);if(asset&&root._listingId===asset.id)return;root._listingId=asset?.id||null;root.replaceChildren();root.hidden=!asset;if(!asset)return;
+  const info=ListingDiscovery.describe(asset);root.append(el('summary','About this listing'),el('span',info.type),el('p',info.text));companyProfilePanel(root,asset,()=>request(`/v1/company-profile?asset_id=${encodeURIComponent(asset.id)}`),()=>root._listingId===asset.id&&select.value===asset.id);
  }
  function updateExchangeCounts(){const exchange=$('stock-exchange');if(!exchange)return;for(const option of Array.from(exchange.children)){option._catalogLabel??=option.textContent;const count=option.value?assets.filter(a=>a.exchange===option.value).length:assets.length;option.textContent=`${option._catalogLabel} (${count})`;}}
  function filter() {

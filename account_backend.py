@@ -19,6 +19,7 @@ from prediction_journal import Journal
 import hashlib
 from backend_service import BackendError,AdmissionGate
 from stock_provider import StockDataError
+from profile_models import CompanyProfileResponse
 from api import UpstreamError
 
 ROOT=Path(__file__).parent
@@ -65,7 +66,7 @@ def create_app(settings=None,store=None,identity=None,research=None,assessment_f
     async def capacity_error(request,error):return JSONResponse(status_code=error.status,content={'error':{'code':error.code,'message':'Research is busy. Try again later.'}})
 
     @app.exception_handler(StockDataError)
-    async def stock_error(request,error):return JSONResponse(status_code=429 if error.code=='stock_budget' else 503,content={'error':{'code':error.code,'message':'Stock data is unavailable. Check provider setup or quota, then retry manually.'}},headers={'Retry-After':str(error.retry_after_seconds)} if error.retry_after_seconds else None)
+    async def stock_error(request,error):return JSONResponse(status_code=429 if error.code in ('stock_budget','profile_rate_limited') else 503,content={'error':{'code':error.code,'message':'Stock data is unavailable. Check provider setup or quota, then retry manually.'}},headers={'Retry-After':str(error.retry_after_seconds)} if error.retry_after_seconds else None)
 
     @app.exception_handler(RecommendationError)
     async def assessment_error(request,error):return JSONResponse(status_code=503,content={'error':{'code':'assessment_unavailable','message':'AI assessment unavailable. Check OpenAI setup or quota; raw analysis remains available. No automatic retry.'}})
@@ -195,6 +196,11 @@ def create_app(settings=None,store=None,identity=None,research=None,assessment_f
     def research_assets(request:Request,kind:str=Query(pattern='^(stock|etf|crypto)$')):
         session=authenticated(request);store.throttle('catalog:'+session['owner'],6)
         return research.catalog(kind)
+
+    @app.get('/v2/research/company-profile',response_model=CompanyProfileResponse)
+    def company_profile(request:Request,asset_id:str=Query(min_length=1,max_length=160)):
+        session=authenticated(request);store.throttle('profile:'+session['owner'],4)
+        return research.company_profile(asset_id)
 
     @app.get('/v2/research/analysis')
     def research_analysis(request:Request,kind:str=Query(pattern='^(stock|etf|crypto)$'),asset_id:str=Query(min_length=1,max_length=160),days:int=Query(ge=35,le=3660),refresh:bool=False):
