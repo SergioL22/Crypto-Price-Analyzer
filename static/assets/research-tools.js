@@ -63,7 +63,8 @@ function watchPerformancePanel(root,listing,current,startTracking){
  let busy=false,generation=0;
  const changed=()=>{generation++;output.replaceChildren();status.textContent='Inputs changed. Calculate again to see the matching result.';};
  for(const id of ['simulation-asset','simulation-benchmark','simulation-amount','simulation-date'])$(id).addEventListener('input',()=>{if(id==='simulation-date'){const field=$('simulation-date'),before=field.value,caret=field.selectionStart,digits=typeof caret==='number'?before.slice(0,caret).replace(/[^0-9]/g,'').length:null;field.value=ResearchReturns.typedDate(before);if(digits!==null&&field.setSelectionRange){let position=0,count=0;while(position<field.value.length&&count<digits){if(/[0-9]/.test(field.value[position]))count++;position++;}field.setSelectionRange(position,position);}if(calendar)calendar.value='';}changed();});
- calendar?.addEventListener('change',()=>{if(!calendar.value)return;$('simulation-date').value=calendar.value;changed();});
+ const calendarChanged=()=>{calendar.value=ResearchReturns.typedDate(calendar.value);$('simulation-date').value=calendar.value;changed();};
+ calendar?.addEventListener('input',calendarChanged);calendar?.addEventListener('change',calendarChanged);
  form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy)return;const selected=asset.value,compare=benchmark.value,amount=Number($('simulation-amount').value),start=$('simulation-date').value,revision=++generation;
   output.replaceChildren();

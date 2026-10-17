@@ -41,3 +41,6 @@ test('numeric date entry adds separators progressively and preserves date valida
  for(const [input,expected] of [['2020','2020'],['20200','2020-0'],['202001','2020-01'],['2020013','2020-01-3'],['20200131','2020-01-31'],['2020-01-31','2020-01-31']]){field.value=input;field.listeners.input();assert.equal(field.value,expected);}
  assert.equal(s.tools.typedDate('bad date'),'bad date');assert.throws(()=>s.tools.date(s.tools.typedDate('20200230')));assert.equal(s.calls.length,0);
 });
+
+
+test('calendar date alternative also accepts numeric entry and clears both fields',()=>{const s=setup(true),calendar=s.e['simulation-calendar'];calendar.value='20200131';calendar.listeners.input();assert.equal(calendar.value,'2020-01-31');assert.equal(s.e['simulation-date'].value,'2020-01-31');calendar.value='';calendar.listeners.input();assert.equal(s.e['simulation-date'].value,'');assert.equal(s.calls.length,0);});
