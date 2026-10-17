@@ -9,7 +9,7 @@ class E{
 }
 const id='twelvedata:stock:XNYS:USD:ABC',other=id.replace('ABC','XYZ');
 function setup(simulator=false){
- const names=['simulation-form','simulation-asset','simulation-benchmark','simulation-amount','simulation-date','simulation-status','simulation-results'];
+ const names=['simulation-form','simulation-asset','simulation-benchmark','simulation-amount','simulation-date','simulation-calendar','simulation-status','simulation-results'];
  const e=simulator?Object.fromEntries(names.map(n=>[n,new E()])):{};
  if(simulator)e['simulation-form'].submit=new E('button');
  const calls=[],charts=[],storage=new Map([['research-desk.equities.v1',JSON.stringify({listings:[{id,name:'Example'},{id:other,name:'Benchmark'}]})]]);
@@ -28,3 +28,9 @@ test('old watchlist entries require explicit tracking without invented dates',()
 test('simulator is manual and rejects mismatched benchmark sessions',async()=>{const s=setup(true);assert.equal(s.calls.length,0);s.e['simulation-asset'].value=id;s.e['simulation-benchmark'].value=other;s.e['simulation-amount'].value='100';s.e['simulation-date'].value='2026-10-14';const pending=s.e['simulation-form'].listeners.submit({preventDefault(){}});s.calls[0].resolve(history());await new Promise(resolve=>setImmediate(resolve));assert.equal(s.calls.length,2);s.calls[1].resolve(history([10],['2026-10-15']));await pending;assert.match(s.e['simulation-status'].textContent,/dates do not match/);assert.equal(s.e['simulation-results'].children.length,0);});
 test('simulator discards changed inputs and never requests the comparison afterward',async()=>{const s=setup(true);s.e['simulation-asset'].value=id;s.e['simulation-benchmark'].value=other;s.e['simulation-amount'].value='100';s.e['simulation-date'].value='2026-10-14';const pending=s.e['simulation-form'].listeners.submit({preventDefault(){}});s.e['simulation-amount'].listeners.input();s.calls[0].resolve(history());await pending;assert.equal(s.calls.length,1);assert.equal(s.charts.length,0);assert.match(s.e['simulation-status'].textContent,/Inputs changed/);});
 test('matching benchmark uses same initial amount and sessions',async()=>{const s=setup(true);s.e['simulation-asset'].value=id;s.e['simulation-benchmark'].value=other;s.e['simulation-amount'].value='100';s.e['simulation-date'].value='2026-10-14';const pending=s.e['simulation-form'].listeners.submit({preventDefault(){}});s.calls[0].resolve(history());await new Promise(resolve=>setImmediate(resolve));s.calls[1].resolve(history([10,15]));await pending;assert.match(s.e['simulation-results'].textContent,/Difference in ending value: \$50.00/);assert.match(s.e['simulation-status'].textContent,/No trade/);});
+
+
+test('optional calendar copies its date into the visible typed field and invalidates results',()=>{
+ const s=setup(true);s.e['simulation-calendar'].value='2026-10-14';s.e['simulation-calendar'].listeners.change();assert.equal(s.e['simulation-date'].value,'2026-10-14');assert.match(s.e['simulation-status'].textContent,/Inputs changed/);assert.equal(s.calls.length,0);
+ s.e['simulation-date'].value='2026-10-15';s.e['simulation-date'].listeners.input();assert.equal(s.e['simulation-calendar'].value,'');assert.equal(s.e['simulation-date'].value,'2026-10-15');
+});

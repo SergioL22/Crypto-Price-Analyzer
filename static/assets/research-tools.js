@@ -58,8 +58,11 @@ function watchPerformancePanel(root,listing,current,startTracking){
   listings=raw.listings.filter(a=>typeof a.name==='string'&&a.name.length<=500&&/^twelvedata:(stock|etf):(XNYS|XNAS|XNGS|XNMS|XNCM|ARCX|XASE|BATS):USD:[A-Za-z0-9.^_-]{1,100}$/.test(a.id));
  }catch{status.textContent='Saved listings could not be read. Your existing workspace was not changed.';}
  for(const [picker,prompt]of [[asset,'Choose a saved stock or ETF'],[benchmark,'No comparison']]){const option=el('option',prompt);option.value='';picker.append(option);for(const a of listings){const o=el('option',a.name);o.value=a.id;picker.append(o);}}
- const today=new Date().toISOString().slice(0,10);$('simulation-date').max=today;
- let busy=false,generation=0;for(const id of ['simulation-asset','simulation-benchmark','simulation-amount','simulation-date'])$(id).addEventListener('input',()=>{generation++;output.replaceChildren();status.textContent='Inputs changed. Calculate again to see the matching result.';});
+ const today=new Date().toISOString().slice(0,10),calendar=$('simulation-calendar');if(calendar)calendar.max=today;
+ let busy=false,generation=0;
+ const changed=()=>{generation++;output.replaceChildren();status.textContent='Inputs changed. Calculate again to see the matching result.';};
+ for(const id of ['simulation-asset','simulation-benchmark','simulation-amount','simulation-date'])$(id).addEventListener('input',()=>{if(id==='simulation-date'&&calendar)calendar.value='';changed();});
+ calendar?.addEventListener('change',()=>{if(!calendar.value)return;$('simulation-date').value=calendar.value;changed();});
  form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy)return;const selected=asset.value,compare=benchmark.value,amount=Number($('simulation-amount').value),start=$('simulation-date').value,revision=++generation;
   output.replaceChildren();
