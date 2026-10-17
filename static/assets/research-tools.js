@@ -2,6 +2,7 @@
 // Research illustrations only. No orders, AI requests or invented prices.
 const ResearchReturns = (() => {
  const day=86400000;
+ function typedDate(value){if(!/^[0-9-]*$/.test(value))return value;const digits=value.replace(/-/g,'').slice(0,8);return digits.slice(0,4)+(digits.length>4?'-'+digits.slice(4,6):'')+(digits.length>6?'-'+digits.slice(6):'');}
  function date(value){if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value)||!Number.isFinite(Date.parse(value))||new Date(value).toISOString().slice(0,10)!==value)throw Error('Choose a valid date.');return value;}
  function days(start,now=new Date()){date(start);const n=Math.ceil((Date.parse(now.toISOString().slice(0,10))-Date.parse(start))/day)+2;if(n<2)throw Error('Choose a date no later than today.');if(n>3660)throw Error('This illustration supports up to ten years. Choose a more recent date.');return n;}
  function series(data,start,after=false){
@@ -25,7 +26,7 @@ const ResearchReturns = (() => {
   const base=points[0].price,scaled=points.map(p=>({...p,price:amount===null?p.price:p.price/base*amount,ma_7:null,ma_25:null,bollinger_lower:null,bollinger_middle:null,bollinger_upper:null}));
   if(scaled.length>1)priceChart(parent,scaled,{sessions:true,title});
  }
- return {date,days,series,result,chart};
+ return {date,typedDate,days,series,result,chart};
 })();
 
 function watchPerformancePanel(root,listing,current,startTracking){
@@ -61,7 +62,7 @@ function watchPerformancePanel(root,listing,current,startTracking){
  const today=new Date().toISOString().slice(0,10),calendar=$('simulation-calendar');if(calendar)calendar.max=today;
  let busy=false,generation=0;
  const changed=()=>{generation++;output.replaceChildren();status.textContent='Inputs changed. Calculate again to see the matching result.';};
- for(const id of ['simulation-asset','simulation-benchmark','simulation-amount','simulation-date'])$(id).addEventListener('input',()=>{if(id==='simulation-date'&&calendar)calendar.value='';changed();});
+ for(const id of ['simulation-asset','simulation-benchmark','simulation-amount','simulation-date'])$(id).addEventListener('input',()=>{if(id==='simulation-date'){const field=$('simulation-date'),before=field.value,caret=field.selectionStart,digits=typeof caret==='number'?before.slice(0,caret).replace(/[^0-9]/g,'').length:null;field.value=ResearchReturns.typedDate(before);if(digits!==null&&field.setSelectionRange){let position=0,count=0;while(position<field.value.length&&count<digits){if(/[0-9]/.test(field.value[position]))count++;position++;}field.setSelectionRange(position,position);}if(calendar)calendar.value='';}changed();});
  calendar?.addEventListener('change',()=>{if(!calendar.value)return;$('simulation-date').value=calendar.value;changed();});
  form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy)return;const selected=asset.value,compare=benchmark.value,amount=Number($('simulation-amount').value),start=$('simulation-date').value,revision=++generation;

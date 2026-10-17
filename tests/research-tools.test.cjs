@@ -34,3 +34,10 @@ test('optional calendar copies its date into the visible typed field and invalid
  const s=setup(true);s.e['simulation-calendar'].value='2026-10-14';s.e['simulation-calendar'].listeners.change();assert.equal(s.e['simulation-date'].value,'2026-10-14');assert.match(s.e['simulation-status'].textContent,/Inputs changed/);assert.equal(s.calls.length,0);
  s.e['simulation-date'].value='2026-10-15';s.e['simulation-date'].listeners.input();assert.equal(s.e['simulation-calendar'].value,'');assert.equal(s.e['simulation-date'].value,'2026-10-15');
 });
+
+
+test('numeric date entry adds separators progressively and preserves date validation',()=>{
+ const s=setup(true),field=s.e['simulation-date'];
+ for(const [input,expected] of [['2020','2020'],['20200','2020-0'],['202001','2020-01'],['2020013','2020-01-3'],['20200131','2020-01-31'],['2020-01-31','2020-01-31']]){field.value=input;field.listeners.input();assert.equal(field.value,expected);}
+ assert.equal(s.tools.typedDate('bad date'),'bad date');assert.throws(()=>s.tools.date(s.tools.typedDate('20200230')));assert.equal(s.calls.length,0);
+});
