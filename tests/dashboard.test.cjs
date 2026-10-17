@@ -15,11 +15,11 @@ class Element {
  setAttribute(key, value) { this[key]=value; }
  reportValidity() { return true; }
 }
-function setup(storage = new Map()) {
+function setup(storage = new Map(),debounce=false) {
  const elements=Object.fromEntries(['load-coins','catalog-status','coin-search','coin-options','coin-search-status','coin-quick','selected-coin','coin','days','include-position','amount','cost','status','analysis','ai','analysis-form','recommend'].map(id=>[id,new Element()]));
  elements.coin.value='bitcoin'; elements.days.value='90'; elements.amount.value='0'; elements.cost.value='0';
  const requests=[],documentEvents={};
- for (const id of ['stock-kind','stock-search','stock-options','stock-status','stock-results','stock-load','stock-run','stock-days','stock-matches','stock-form','stock-exchange','stock-query-mode','stock-sort','stock-reset-filters','stock-refresh','stock-initial','stock-listing-summary','stock-period','stock-retry']) elements[id]=new Element();
+ for (const id of ['stock-kind','stock-search','stock-options','stock-status','stock-results','stock-load','stock-run','stock-days','stock-matches','stock-more','stock-form','stock-exchange','stock-query-mode','stock-sort','stock-reset-filters','stock-refresh','stock-initial','stock-listing-summary','stock-period','stock-retry']) elements[id]=new Element();
  elements['stock-kind'].value='stock'; elements['stock-days'].value='90';
  for (const id of ['restore-file','restore-preview','restore-apply','restore-agree','restore-status','restore-details','alert-form','alerts-load','alerts-check','alerts-status','alerts-list','alerts-history','alert-save','alert-coin','alert-type','alert-direction','alert-threshold']) elements[id]=new Element();
  elements['alert-type'].value='price'; elements['alert-direction'].value='above';
@@ -31,6 +31,7 @@ function setup(storage = new Map()) {
  context.Blob=Blob;
  context.URL={createObjectURL:blob=>{objectUrls.push(blob);return 'blob:sample';},revokeObjectURL:url=>revokedUrls.push(url)};
  context.setTimeout=fn=>timers.push(fn);
+ if(debounce)context.clearTimeout=id=>{if(timers[id-1])timers[id-1].cancelled=true;};
  context.document.body={append:link=>{link.click=()=>downloads.push({href:link.href,name:link.download});link.remove=()=>{};}};
  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../static/assets/common.js'), 'utf8'),context);
  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../static/assets/visuals.js'), 'utf8'),context);
@@ -88,12 +89,12 @@ test('stock loading state recovers after errors without repeating a request',asy
  assert.equal(s.requests.length,2);
 });
 
-test('stock dropdown includes more than 200 names, sorts, and filters without requests',async()=>{
+test('stock dropdown pages the full catalog, sorts, and searches all names without requests',async()=>{
  const s=setup(); const pending=s.elements['stock-load'].listeners.click();
  const assets=Array.from({length:350},(_,i)=>({id:`asset-${i}`,name:`Company ${String(i).padStart(3,'0')}`,symbol:`T${i}`,exchange:'XNYS',currency:'USD'})).reverse();
  s.answer(0,{assets,stale:false}); await pending;
  const picker=s.elements['stock-options'];
- assert.equal(picker.children.length,351);
+ assert.equal(picker.children.length,201);assert.equal(s.elements['stock-more'].hidden,false);s.elements['stock-more'].listeners.click();assert.equal(picker.children.length,351);assert.equal(s.elements['stock-more'].hidden,true);
  assert.match(picker.children[1].textContent,/^Company 000 \(T0\)/);
  assert.match(picker.children.at(-1).textContent,/Company 349/);
  assert.equal(s.elements['stock-run'].disabled,true);
@@ -475,3 +476,14 @@ test('Compare selections never start a hidden standalone analysis request',async
 require('./company-profile.test.cjs');
 
 require('./research-tools.test.cjs');
+
+
+test('rapid search input coalesces and still finds listings outside the rendered page',async()=>{
+ const s=setup(new Map(),true),pending=s.elements['stock-load'].listeners.click();const assets=Array.from({length:500},(_,i)=>({id:`asset-${i}`,name:`Company ${String(i).padStart(3,'0')}`,symbol:`T${i}`,exchange:'XNYS',currency:'USD'}));s.answer(0,{assets,stale:false});await pending;
+ assert.equal(s.elements['stock-options'].children.length,201);
+ s.elements['stock-search'].value='Company 3';s.elements['stock-search'].listeners.input();
+ s.elements['stock-search'].value='Company 499';s.elements['stock-search'].listeners.input();
+ assert.equal(s.elements['stock-options'].disabled,true);assert.equal(s.requests.length,1);
+ for(const fn of s.timers)if(!fn.cancelled)fn();
+ assert.equal(s.elements['stock-options'].disabled,false);assert.equal(s.elements['stock-options'].children.length,2);assert.match(s.elements['stock-options'].children[1].textContent,/Company 499/);assert.equal(s.requests.length,1);
+});

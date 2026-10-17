@@ -14,6 +14,7 @@ from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
 from typing import Literal
 
 from stock_service import StockService
@@ -63,6 +64,7 @@ def create_app(*,stocks=None,now=None):
         try:yield
         finally:gate.release()
     app=FastAPI(title='Private Research Preview',docs_url=None,redoc_url=None,openapi_url=None)
+    app.add_middleware(GZipMiddleware,minimum_size=1024,compresslevel=5)
 
     def error(status,code,message,headers=None):
         return JSONResponse(status_code=status,content={'error':{'code':code,'message':message}},headers=headers)

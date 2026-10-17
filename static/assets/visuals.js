@@ -29,6 +29,7 @@ function priceChart(parent, points, options = {}) {
  const keys=['price','ma_7','ma_25','bollinger_lower','bollinger_middle','bollinger_upper'];
  let previous=-Infinity;
  for(const point of points){const time=Date.parse(point.date+'T00:00:00Z');if(!/^\d{4}-\d{2}-\d{2}$/.test(point.date)||!Number.isFinite(time)||time<=previous||!Number.isFinite(point.price)||point.price<=0||keys.some(key=>point[key]!==null&&!Number.isFinite(point[key])))throw Error('Invalid chart data');previous=time;}
+ const timestamps=points.map(p=>Date.parse(p.date)),timesByDate=new Map(points.map((p,i)=>[p.date,timestamps[i]]));
  const bars=options.bars;
  const hasBars=Array.isArray(bars)&&bars.length===points.length&&bars.every((bar,i)=>bar.date===points[i].date&&bar.close===points[i].price&&['open','high','low','close'].every(k=>Number.isFinite(bar[k])&&bar[k]>0)&&bar.low<=Math.min(bar.open,bar.close)&&bar.high>=Math.max(bar.open,bar.close));
  const hasVolume=hasBars&&bars.every(bar=>Number.isFinite(bar.volume)&&bar.volume>=0);
@@ -77,7 +78,7 @@ function priceChart(parent, points, options = {}) {
   if(style?.value==='candles')for(let i=view.first;i<=view.last;i++)values.push(bars[i].low,bars[i].high);
   let low=Math.min(...values),high=Math.max(...values);const pad=(high-low)*.08||high*.01||1;low-=pad;high+=pad;
   const start=Date.parse(visible[0].date),end=Date.parse(visible.at(-1).date);
-  scaleX=p=>start===end?232.5:65+(Date.parse(p.date)-start)/(end-start)*335;scaleY=value=>235-(value-low)/(high-low)*205;
+  scaleX=p=>start===end?232.5:65+(timesByDate.get(p.date)-start)/(end-start)*335;scaleY=value=>235-(value-low)/(high-low)*205;
   svg=node('svg',{viewBox:'0 0 420 280',role:'img','aria-label':`${style?.value==='candles'?'Split-adjusted daily OHLC candlesticks':'Historical USD prices'} from ${visible[0].date} to ${visible.at(-1).date}. Missing data is not filled.`});
   for(let j=0;j<=4;j++){const value=low+(high-low)*j/4,pos=scaleY(value);svg.append(node('line',{x1:65,x2:400,y1:pos,y2:pos,stroke:'#293e5c'}),node('text',{x:57,y:pos+4,'text-anchor':'end',fill:'#aebed4','font-size':12},new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:2}).format(value)));}
   for(const key of shown){if(key==='price'&&style?.value==='candles')continue;let d='',lastTime=null;for(const p of visible){const time=Date.parse(p.date);if(p[key]===null){lastTime=null;continue;}const move=lastTime===null||(options.sessions?p.break_before===true:time-lastTime>86400000);d+=`${move?'M':'L'}${scaleX(p).toFixed(2)},${scaleY(p[key]).toFixed(2)} `;lastTime=time;}svg.append(node('path',{d,fill:'none',stroke:colors[key],'stroke-width':key==='price'?2.5:1.5,'stroke-dasharray':key.startsWith('bollinger')?'4 4':key==='ma_25'?'8 3':'none'}));}
@@ -91,7 +92,7 @@ function priceChart(parent, points, options = {}) {
   volumePlot.replaceChildren();volumePlot.hidden=!volume?.checked;
   if(volume?.checked){const max=Math.max(...bars.slice(view.first,view.last+1).map(b=>b.volume))||1,chart=node('svg',{viewBox:'0 0 420 75',role:'img','aria-label':'Daily share volume over the same visible dates'});chart.append(node('text',{x:65,y:12,fill:'#aebed4','font-size':10},'Daily share volume'));for(let i=view.first;i<=view.last;i++){const b=bars[i],height=b.volume/max*48;chart.append(node('rect',{x:scaleX(points[i])-Math.max(.3,Math.min(6,160/visible.length))/2,y:65-height,width:Math.max(.3,Math.min(6,160/visible.length)),height,fill:'#7db1ff'}));}volumePlot.append(chart);}
  }
- function nearest(fraction){const first=Date.parse(points[view.first].date),last=Date.parse(points[view.last].date),target=first+Math.max(0,Math.min(1,fraction))*(last-first);let best=view.first;for(let i=view.first+1;i<=view.last;i++)if(Math.abs(Date.parse(points[i].date)-target)<Math.abs(Date.parse(points[best].date)-target))best=i;return best;}
+ function nearest(fraction){const first=timestamps[view.first],last=timestamps[view.last],target=first+Math.max(0,Math.min(1,fraction))*(last-first);let low=view.first,high=view.last;while(low<high){const mid=Math.floor((low+high)/2);if(timestamps[mid]<target)low=mid+1;else high=mid;}return low>view.first&&target-timestamps[low-1]<=timestamps[low]-target?low-1:low;}
  function fraction(event){const rect=svg.getBoundingClientRect();return Math.max(0,Math.min(1,((event.clientX-rect.left)/rect.width*420-65)/335));}
  function hover(event){inspect(nearest(fraction(event)),false);const rect=plot.getBoundingClientRect();tooltip.hidden=false;tooltip.style.left=`${Math.max(0,Math.min(rect.width-170,event.clientX-rect.left+12))}px`;tooltip.style.top=`${Math.max(0,event.clientY-rect.top-45)}px`;}
  plot.addEventListener('pointerdown',event=>{if(event.pointerType==='mouse'&&event.button!==0)return;plot.focus?.();plot.setPointerCapture?.(event.pointerId);pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});gesture={x:event.clientX,y:event.clientY,first:view.first,last:view.last,moved:false};if(pointers.size===2){const [a,b]=[...pointers.values()];pinch={distance:Math.hypot(a.x-b.x,a.y-b.y)||1,first:view.first,last:view.last};}});

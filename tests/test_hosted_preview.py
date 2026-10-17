@@ -85,3 +85,9 @@ def test_render_recipe_uses_hosted_factory_and_secret_free_build_context():
     assert 'COPY . .' not in docker and 'OPENAI_API_KEY' not in docker
     ignored=(root/'.dockerignore').read_text(encoding='utf-8').splitlines()
     assert '**' in ignored and '!*.py' in ignored and '!.env' not in ignored and '!*.db' not in ignored
+
+
+def test_hosted_catalog_is_compressed_without_changing_contract(preview):
+    response=preview.get('/v1/stock-analysis',params={'asset_id':ASSET,'days':90},auth=('preview',PASSWORD),headers={'Accept-Encoding':'gzip'})
+    assert response.status_code==200 and response.headers['content-encoding']=='gzip'
+    assert response.json()['asset']['id']==ASSET and response.json()['history']

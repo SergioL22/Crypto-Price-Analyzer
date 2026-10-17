@@ -2,6 +2,7 @@
 (() => {
  const kind = $("stock-kind"), search = $("stock-search"), select = $("stock-options");
  const status = $("stock-status"), result = $("stock-results"), load = $("stock-load"), run = $("stock-run"), days = $("stock-days");
+ let optionLimit=200,filterKey='',searchTimer=null;
  let assets = [], revision = 0, busy = false, pendingCatalog = false, pendingAnalysis = false;
  const requested = typeof URLSearchParams !== "undefined" && window.location ? new URLSearchParams(window.location.search).get("asset") : null;
  const filterToggle = $("filter-toggle"), filterPanel = $("stock-filters");
@@ -23,13 +24,16 @@
   const previous = select.value, term = search.value.trim().toLowerCase();
   const exact=$("stock-query-mode")?.value==='ticker',order=$("stock-sort")?.value||'name';
   const matched = ListingDiscovery.sort(assets.filter(a=>ListingDiscovery.matches(a,{query:search.value,exact,exchange:$('stock-exchange')?.value,initial:$('stock-initial')?.value})),order,search.value);
+  const key=JSON.stringify([search.value,exact,order,$('stock-exchange')?.value,$('stock-initial')?.value,kind.value]);if(key!==filterKey){filterKey=key;optionLimit=200;}
+  const shown=matched.slice(0,optionLimit);if(previous&&!shown.some(a=>a.id===previous)){const selected=matched.find(a=>a.id===previous);if(selected)shown.push(selected);}
   select.replaceChildren();
   const placeholder = el("option", matched.length ? "Choose a company or fund" : assets.length ? "No matching companies or funds" : "Load the list to browse");
   placeholder.value = ""; placeholder.disabled = true; select.append(placeholder);
-  for (const a of matched) { const option = el("option", `${a.name} (${a.symbol}) · ${a.exchange} · ${a.currency}`); option.value = a.id; select.append(option); }
+  for (const a of shown) { const option = el("option", `${a.name} (${a.symbol}) · ${a.exchange} · ${a.currency}`); option.value = a.id; select.append(option); }
   select.value = matched.some(a => a.id === previous) ? previous : "";
-  $("stock-matches").textContent = assets.length ? `${matched.length} of ${assets.length} listings` : "Load the company / fund list to browse by name.";
-  renderListing();
+  $("stock-matches").textContent = assets.length ? `${matched.length} of ${assets.length} listings${matched.length>optionLimit?` · showing ${shown.length}; refine your search or load more`:""}` : "Load the company / fund list to browse by name.";
+  if($('stock-more')){$('stock-more').hidden=matched.length<=optionLimit;$('stock-more').textContent=`Show next ${Math.min(200,Math.max(0,matched.length-optionLimit))} matches`;}
+  select.disabled=false;renderListing();
   run.disabled = busy || !select.value;run.hidden=!select.value;
   if($("equity-save")){$("equity-save").disabled=busy||!select.value;$("equity-save").hidden=!select.value;}
  }
@@ -44,7 +48,8 @@
   days.value = period === "ytd" ? String(Math.floor((Date.UTC(part("year"),part("month")-1,part("day"))-Date.UTC(part("year"),0,1))/86400000)+1) : period;
   invalidate(); pendingAnalysis=true;if(!busy)return analyze();
  });
- search.addEventListener("input", () => { invalidate(); filter(); });
+ $('stock-more')?.addEventListener('click',()=>{optionLimit+=200;filter();});
+ search.addEventListener("input", () => { invalidate();select.disabled=true;run.disabled=true;if($('equity-save'))$('equity-save').disabled=true;if(typeof setTimeout==='function'&&typeof clearTimeout==='function'){if(searchTimer!==null)clearTimeout(searchTimer);searchTimer=setTimeout(()=>{searchTimer=null;filter();},120);}else filter(); });
  select.addEventListener("change", () => { invalidate(); renderListing(); run.disabled = busy || !select.value;if($("equity-save"))$("equity-save").disabled=busy||!select.value; pendingAnalysis=true;if(!busy) return analyze(); }); days.addEventListener("input", invalidate); days.addEventListener("change",()=>{pendingAnalysis=true;if(!busy)return analyze();});
  async function loadCatalog() {
   if (busy) return;
@@ -54,8 +59,8 @@
   try {
    const data = await request(`/v1/assets?asset_class=${encodeURIComponent(kind.value)}`);
    if (catalogKind !== kind.value) return;
-   assets = [...data.assets].sort((a,b) => a.name.localeCompare(b.name) || a.symbol.localeCompare(b.symbol) || a.exchange.localeCompare(b.exchange)); updateExchangeCounts(); filter();
-   if(requested && assets.some(a=>a.id===requested) && !search.value && !$("stock-exchange")?.value) {select.value=requested;pendingAnalysis=true;}
+   assets = ListingDiscovery.sort(data.assets,'name'); updateExchangeCounts(); filter();
+   if(requested && assets.some(a=>a.id===requested) && !search.value && !$("stock-exchange")?.value) {if(!Array.from(select.children).some(o=>o.value===requested)){const a=assets.find(a=>a.id===requested),option=el("option",`${a.name} (${a.symbol}) · ${a.exchange} · ${a.currency}`);option.value=a.id;select.append(option);}select.value=requested;pendingAnalysis=true;}
    status.setAttribute("data-state","idle");status.textContent = data.stale?"Showing a cached list. Reload it from Filters if needed.":assets.length?"":"No supported listings are available.";
   } catch (error) { if (catalogKind === kind.value) {if($("stock-retry"))$("stock-retry").hidden=false;status.setAttribute("data-state","error");status.textContent = error.message;} }
   finally { busy = false; load.disabled = false;load.textContent=assets.length ? "Reload listings" : "Retry loading listings";load.setAttribute("aria-busy","false"); filter(); if(pendingCatalog) loadCatalog();else if(pendingAnalysis) analyze(); }
