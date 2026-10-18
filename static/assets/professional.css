@@ -59,9 +59,9 @@ header .help-trigger{float:right;margin:0 0 12px 16px;white-space:nowrap}
 .help-panel-heading h2{margin:0}.help-panel input{width:100%;box-sizing:border-box;margin-top:8px}
 .listing-picker>summary{font-weight:650;cursor:pointer;color:var(--text,#edf2fa)}
 @media(max-width:600px){header .help-trigger{float:none;display:block;margin:0 0 12px auto;font-size:.8rem}.help-panel{padding:18px}.help-panel .glossary-terms{max-height:none;overflow:visible}}
-.glossary-terms{max-height:28rem;overflow:auto;overscroll-behavior:contain}
+.help-panel .glossary-terms{max-height:none;overflow:visible;overscroll-behavior:contain}
 .glossary-terms>div{display:block;padding:.8rem 0;border-bottom:1px solid var(--border,#334155)}
-.glossary-terms dt{font-weight:650}.glossary-terms dd{margin:.35rem 0 0;line-height:1.6}
+.help-panel .glossary-terms dt{font-weight:650}.help-panel .glossary-terms dd{margin:.35rem 0 0;line-height:1.6;text-align:left;white-space:normal;overflow-wrap:anywhere;min-width:0;max-width:100%}.help-panel .glossary-terms>div{min-width:0;max-width:100%}
 .listing-picker{margin:1rem 0;padding:1rem;border:1px solid var(--border,#334155);border-radius:10px}
 .listing-picker label{display:block;margin:.8rem 0}.listing-picker select,.listing-picker input{width:100%;max-width:100%;min-width:0}
 #equity-threshold-help,#equity-alert-preview{line-height:1.6}#equity-alert-preview{font-weight:600}
