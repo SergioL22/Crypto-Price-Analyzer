@@ -11,11 +11,12 @@ class E {
  get options(){return this.children;}addEventListener(name,fn){this.listeners[name]=fn;}
 }
 function setup(file='equities.js',initial={version:1,listings:[{id,name:'Example'}],holdings:[],alerts:[]},demo=false){
- const names=['equity-list','equity-status','equity-save','equity-save-status','stock-options','equity-holding','equity-holding-form','equity-quantity','equity-cost','equity-remove-holding','equity-value','equity-valuation','equity-holdings','equity-alert-listing','equity-alert-type','equity-alert-direction','equity-alert-threshold','equity-alert-form','equity-alerts','equity-check','equity-check-result','equity-restore-file','equity-restore-preview','equity-restore-apply','equity-monitor-start','equity-monitor-stop','equity-monitor-status','equity-monitor-results','screen-list','screen-status','screen-results','screen-order','screen-add','screen-run','screen-period','screen-kind','screen-min-price','screen-max-price','screen-min-return','screen-min-volume','screen-clear-filters','screen-filter-toggle','screen-filters'];
+ const names=['saved-picker','saved-picker-kind','saved-picker-load','saved-picker-search','saved-picker-options','saved-picker-add','saved-picker-status','equity-alert-save','equity-alert-onboarding','equity-alert-preview','equity-list','equity-status','equity-save','equity-save-status','stock-options','equity-holding','equity-holding-form','equity-quantity','equity-cost','equity-remove-holding','equity-value','equity-valuation','equity-holdings','equity-alert-listing','equity-alert-type','equity-alert-direction','equity-alert-threshold','equity-alert-form','equity-alerts','equity-check','equity-check-result','equity-restore-file','equity-restore-preview','equity-restore-apply','equity-monitor-start','equity-monitor-stop','equity-monitor-status','equity-monitor-results','screen-list','screen-status','screen-results','screen-order','screen-add','screen-run','screen-period','screen-kind','screen-min-price','screen-max-price','screen-min-return','screen-min-volume','screen-clear-filters','screen-filter-toggle','screen-filters'];
  const elements=Object.fromEntries(names.map(n=>[n,new E()])),storage=new Map([[demo?'research-desk.demo.equities.v1':key,JSON.stringify(initial)]]),requests=[];
  const timers=[],events={},windowEvents={};let now=Date.now();const Clock=class extends Date{constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}};
  const context={setTimeout:(fn,delay)=>{const timer={fn,delay};timers.push(timer);return timer;},clearTimeout:timer=>{timer.cancelled=true;},Intl,Date:Clock,Set,Map,JSON,Number,Array,window:{addEventListener:(name,fn)=>windowEvents[name]=fn,confirm:()=>true},localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)},document:{body:{dataset:{demo:demo?'true':'false'}},addEventListener:(name,fn)=>events[name]=fn,getElementById:n=>elements[n],createElement:()=>new E()},fetch:(url)=>new Promise(resolve=>requests.push({url,resolve}))};
  for(const name of (file==='screener.js'?['common.js','screening-feed.js',file]:['common.js',file]))vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/assets',name),'utf8'),context);
+ elements['saved-picker-kind'].value='stock';
  const picker=elements['stock-options'];picker.value=id;const option=new E();option.value=id;option.textContent='Example';picker.append(option);
  return {timers,events,windowEvents,context,advance:ms=>now+=ms,e:elements,storage,requests,answer:(i,data)=>requests[i].resolve({ok:true,json:async()=>data}),data:()=>JSON.parse(storage.get(demo?'research-desk.demo.equities.v1':key))};
 }
@@ -98,4 +99,27 @@ test('public demo saves only demo IDs under an isolated workspace key',()=>{
  const demoId=id.replace('twelvedata:','demo:');s.e['stock-options'].children[0].value=demoId;s.e['stock-options'].value=demoId;s.e['equity-save'].listeners.click();
  assert.equal(s.data().listings[0].id,demoId);assert.equal(s.storage.get(key),original);assert.equal(s.requests.length,0);
  s.e['stock-options'].value=id;s.e['equity-save'].listeners.click();assert.equal(s.data().listings.length,1);assert.match(s.e['equity-status'].textContent,/Choose/);
+});
+
+test('empty watchlist exposes a direct picker and disables unusable checks',()=>{
+ const s=setup('equities.js',{version:1,listings:[],holdings:[],alerts:[]});
+ assert.equal(s.e['saved-picker'].open,true);assert.equal(s.e['equity-check'].disabled,true);assert.equal(s.e['equity-alert-save'].disabled,true);assert.equal(s.e['equity-monitor-start'].disabled,true);assert.equal(s.requests.length,0);
+});
+test('direct picker saves a demo listing and selects it for alert setup without price calls',async()=>{
+ const s=setup('equities.js',{version:1,listings:[],holdings:[],alerts:[]},true),demoId='demo:stock:XNYS:USD:SIMSUN';
+ const pending=s.e['saved-picker-load'].listeners.click();assert.equal(s.requests[0].url,'/v1/assets?asset_class=stock');
+ s.answer(0,{assets:[{id:demoId,name:'Fictional Sunworks',symbol:'SIMSUN',exchange:'XNYS'}]});await pending;
+ s.e['saved-picker-options'].value=demoId;s.e['saved-picker-options'].listeners.change();s.e['saved-picker-add'].listeners.click();
+ assert.equal(s.data().listings[0].id,demoId);assert.equal(s.e['equity-alert-listing'].value,demoId);assert.equal(s.e['equity-check'].disabled,true);assert.equal(s.requests.length,1);
+ s.e['saved-picker-add'].listeners.click();assert.equal(s.data().listings.length,1);
+});
+test('switching picker kind rejects stale catalog responses',async()=>{
+ const s=setup(),pending=s.e['saved-picker-load'].listeners.click();s.e['saved-picker-kind'].value='etf';s.e['saved-picker-kind'].listeners.change();
+ s.answer(0,{assets:[{id,name:'Example',symbol:'ABC',exchange:'XNYS'}]});await pending;assert.equal(s.e['saved-picker-options'].children.length,0);assert.equal(s.e['saved-picker-load'].disabled,false);
+});
+test('blank alert targets never become zero and instructions explain strict comparisons',()=>{
+ const s=setup();s.e['equity-alert-type'].value='price';s.e['equity-alert-direction'].value='above';
+ s.e['equity-alert-threshold'].value='';s.e['equity-alert-form'].listeners.submit({preventDefault(){}});assert.equal(s.data().alerts.length,0);
+ s.e['equity-alert-threshold'].value='100';s.e['equity-alert-threshold'].listeners.input();assert.match(s.e['equity-alert-preview'].textContent,/greater than \$100/);assert.equal(s.e['equity-alert-save'].disabled,false);
+ s.e['equity-alert-form'].listeners.submit({preventDefault(){}});assert.equal(s.data().alerts[0].threshold,100);assert.equal(s.e['equity-check'].disabled,false);
 });

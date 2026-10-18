@@ -19,7 +19,7 @@
   return {version:1,listings:data.listings.map(({id,name,saved_on})=>saved_on===undefined?{id,name}:{id,name,saved_on}),holdings:data.holdings.map(({id,quantity,cost})=>({id,quantity,cost})),alerts:data.alerts.map(({id,type,direction,threshold,triggered})=>({id,type,direction,threshold,triggered}))};
  }
  function save(data) { localStorage.setItem(key, JSON.stringify(data)); }
- let restore=null;
+ let restore=null,alertChecking=false;
  $("equity-export")?.addEventListener("click",()=>{
   try{const blob=new Blob([JSON.stringify(read(),null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),link=el("a");link.href=url;link.download="stock-workspace-backup.json";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);say("Stock workspace backup downloaded. Keep holdings private.");}catch{say("Could not export the stock workspace.");}
  });
@@ -47,7 +47,8 @@
     const row=el("li"), open=el("a",a.name), remove=el("button","Remove from watchlist");
     open.href=`/stocks.html?asset=${encodeURIComponent(a.id)}`;
     remove.type="button"; remove.addEventListener("click",()=>change(d=>{d.listings=d.listings.filter(x=>x.id!==a.id);}));
-    row.append(open,remove);if(typeof watchPerformancePanel==='function')watchPerformancePanel(row,a,()=>read().listings.find(x=>x.id===a.id),()=>change(d=>{const current=d.listings.find(x=>x.id===a.id);if(current&&!current.saved_on)current.saved_on=new Date().toISOString().slice(0,10);}));container.append(row);
+    const alert=el("a","Create an alert");alert.href=`/alerts.html?asset=${encodeURIComponent(a.id)}`;
+    row.append(open,alert,remove);if(typeof watchPerformancePanel==='function')watchPerformancePanel(row,a,()=>read().listings.find(x=>x.id===a.id),()=>change(d=>{const current=d.listings.find(x=>x.id===a.id);if(current&&!current.saved_on)current.saved_on=new Date().toISOString().slice(0,10);}));container.append(row);
    }
    if(!data.listings.length) {const item=el("li","Your watchlist is empty. "),link=el("a","Explore companies and funds");link.href="/";item.className="empty-state";item.append(link);container.append(item);}
    for(const selectId of ["equity-holding","equity-alert-listing"]) {
@@ -57,17 +58,20 @@
     // Include holdings removed from the watchlist so they remain editable.
     const ids=[...new Set([...data.listings.map(a=>a.id),...data.holdings.map(h=>h.id),...data.alerts.map(a=>a.id)])];
     for(const id of ids){const option=el("option",label(data,id));option.value=id;select.append(option);}
-    select.value=ids.includes(previous)?previous:"";
+    select.value=ids.includes(previous)?previous:ids.length===1?ids[0]:"";
    }
+   if(!data.listings.length&&$("saved-picker"))$("saved-picker").open=true;
+   updateAlertHelp();
+   if(monitorStart&&!monitoring)monitorStart.disabled=!data.listings.length;
    const holdings=$("equity-holdings");if(holdings){holdings.replaceChildren();for(const h of data.holdings){
     const row=el("li",`${label(data,h.id)} · ${format(h.quantity)} shares · average cost $${format(h.cost)}`);
     holdings.append(row);
    }if(!data.holdings.length){const item=el("li","No holdings yet. Save a listing to your watchlist, then enter your shares and average cost above.");item.className="empty-state";holdings.append(item);}}
    const alerts=$("equity-alerts");if(alerts){alerts.replaceChildren();data.alerts.forEach((a,index)=>{
-    const row=el("li",`${label(data,a.id)} · ${a.type} ${a.direction} ${format(a.threshold)} · ${a.triggered?"Condition matched at last check":"Not triggered"}`);
+    const row=el("li",`${label(data,a.id)} · ${a.type==="price"?"Closing price":"RSI (14)"} ${a.direction} ${a.type==="price"?priceLabel(a.threshold):format(a.threshold)} · ${a.triggered?"Condition matched at last check":"Not triggered"}`);
     const remove=el("button","Remove rule");remove.type="button";
     remove.addEventListener("click",()=>change(d=>{const current=d.alerts.findIndex(x=>JSON.stringify(x)===JSON.stringify(a));if(current>=0)d.alerts.splice(current,1);}));row.append(remove);alerts.append(row);
-   });if(!data.alerts.length){const item=el("li","No alerts yet. Choose a saved listing and a price or RSI threshold above. Checks run only when you press Check selected listing.");item.className="empty-state";alerts.append(item);}}
+   });if(!data.alerts.length){const item=el("li","No alerts yet. Add a listing above, choose a target value and save a rule. Then check it manually or start foreground monitoring below.");item.className="empty-state";alerts.append(item);}}
   } catch(error) { say(error.message); }
  }
  $("equity-save")?.addEventListener("click",()=>{
@@ -90,15 +94,55 @@
   if(!window.confirm("Remove this saved stock/ETF holding? This does not place a trade."))return;
   change(data=>{data.holdings=data.holdings.filter(h=>h.id!==id);});
  });
+ // Direct discovery makes saved tools usable without a trip through Explore.
+ const pickerLoad=$('saved-picker-load'),pickerKind=$('saved-picker-kind'),pickerSearch=$('saved-picker-search'),pickerOptions=$('saved-picker-options'),pickerAdd=$('saved-picker-add'),pickerStatus=$('saved-picker-status');
+ let pickerAssets=[],pickerRevision=0;
+ function filterSavedPicker(){
+  if(!pickerOptions)return;const previous=pickerOptions.value,query=pickerSearch.value.trim().toLowerCase();
+  const matched=pickerAssets.filter(a=>(a.name+' '+a.symbol).toLowerCase().includes(query));pickerOptions.replaceChildren();
+  const prompt=el('option',matched.length?'Choose a company or fund':'No matching listings');prompt.value='';pickerOptions.append(prompt);
+  for(const a of matched.slice(0,200)){const option=el('option',`${a.name} (${a.symbol}) · ${a.exchange}`);option.value=a.id;pickerOptions.append(option);}
+  pickerOptions.value=matched.slice(0,200).some(a=>a.id===previous)?previous:'';pickerOptions.disabled=!matched.length;pickerAdd.disabled=!pickerOptions.value;
+  pickerStatus.textContent=`${matched.length} matching listings${matched.length>200?' · showing 200; refine your search':''}. Choose one, then press Add to watchlist.`;
+ }
+ pickerLoad?.addEventListener('click',async()=>{
+  const current=++pickerRevision,kind=pickerKind.value;pickerLoad.disabled=true;pickerAdd.disabled=true;pickerOptions.disabled=true;pickerSearch.disabled=true;pickerStatus.textContent='Loading listings…';
+  try{const data=await request(`/v1/assets?asset_class=${encodeURIComponent(kind)}`);if(current!==pickerRevision)return;
+   pickerAssets=data.assets.filter(a=>valid(a.id)&&a.id.split(':')[1]===kind&&typeof a.name==='string'&&typeof a.symbol==='string').sort((a,b)=>a.name.localeCompare(b.name));pickerSearch.disabled=false;filterSavedPicker();
+  }catch(error){if(current===pickerRevision)pickerStatus.textContent=error.message;}
+  finally{if(current===pickerRevision){pickerLoad.disabled=false;pickerLoad.textContent='Reload listings';}}
+ });
+ pickerKind?.addEventListener('change',()=>{pickerRevision++;pickerAssets=[];pickerSearch.value='';pickerSearch.disabled=true;pickerOptions.replaceChildren();pickerOptions.disabled=true;pickerAdd.disabled=true;pickerLoad.disabled=false;pickerLoad.textContent='Browse listings';pickerStatus.textContent='Press Browse listings for the selected asset type.';});
+ pickerSearch?.addEventListener('input',filterSavedPicker);
+ pickerOptions?.addEventListener('change',()=>{pickerAdd.disabled=!pickerOptions.value;});
+ pickerAdd?.addEventListener('click',()=>{
+  const asset=pickerAssets.find(a=>a.id===pickerOptions.value);if(!asset)return;
+  try{const data=read();if(!data.listings.some(a=>a.id===asset.id)){if(data.listings.length>=50)throw Error('Your watchlist is full. Remove an item first.');data.listings.push({id:asset.id,name:`${asset.name} (${asset.symbol}) · ${asset.exchange}`,saved_on:new Date().toISOString().slice(0,10)});save(data);}
+   render();if($('equity-alert-listing'))$('equity-alert-listing').value=asset.id;updateAlertHelp();if(monitoring)stopMonitoring('Watchlist changed. Restart monitoring when ready.');observations.clear();drawMonitoring();
+   pickerStatus.textContent='Saved to your watchlist in this browser.';say($('equity-alert-form')?'Listing selected. Choose a target value, save the alert rule, then check it.':'Listing saved. Open its name below to see the chart, or choose Create an alert.');
+  }catch(error){pickerStatus.textContent=error.message;}
+ });
+ function updateAlertHelp(){
+  const select=$('equity-alert-listing');if(!select)return;const chosen=valid(select.value),type=$('equity-alert-type')?.value||'price',direction=$('equity-alert-direction')?.value||'above',input=$('equity-alert-threshold');
+  const raw=input?.value.trim()||'',threshold=Number(raw),validTarget=raw!==''&&Number.isFinite(threshold)&&threshold>=0&&(type!=='rsi'||threshold<=100);
+  if(input){input.max=type==='rsi'?'100':'';input.placeholder=type==='rsi'?'Example: 70':'Example: 100';}
+  if($('equity-alert-save'))$('equity-alert-save').disabled=!chosen||!validTarget;
+  if($('equity-check')){try{$('equity-check').disabled=alertChecking||!chosen||!read().alerts.some(a=>a.id===select.value);}catch{$('equity-check').disabled=true;}}
+  if($('equity-alert-onboarding'))$('equity-alert-onboarding').textContent=chosen?'Choose a target, save the rule, then press Check selected listing. No check runs automatically when you save.':'First add a company or fund using the picker above, or save one from Explore. Your saved listings appear here.';
+  if($('equity-alert-preview'))$('equity-alert-preview').textContent=!chosen?'Add and choose a saved listing to begin.':!validTarget?`Enter ${type==='rsi'?'an RSI target from 0 to 100':'a target price in USD'}.`:`This rule matches when ${type==='rsi'?'RSI (14)':'the completed daily closing price'} is ${direction==='above'?'greater':'less'} than ${type==='price'?'$':''}${format(threshold)}. Equal to the target does not match.`;
+ }
+ for(const id of ['equity-alert-listing','equity-alert-type','equity-alert-direction'])$(id)?.addEventListener('change',updateAlertHelp);
+ $('equity-alert-threshold')?.addEventListener('input',updateAlertHelp);
  $("equity-alert-form")?.addEventListener("submit",event=>{
   event.preventDefault();const id=$("equity-alert-listing").value,type=$("equity-alert-type").value,direction=$("equity-alert-direction").value,threshold=Number($("equity-alert-threshold").value);
-  if(!valid(id)||!["price","rsi"].includes(type)||!["above","below"].includes(direction)||!Number.isFinite(threshold)||threshold<0||(type==="rsi"&&threshold>100)){say("Choose a listing and valid threshold (RSI 0–100).");return;}
+  if(!$("equity-alert-threshold").value.trim()||!valid(id)||!["price","rsi"].includes(type)||!["above","below"].includes(direction)||!Number.isFinite(threshold)||threshold<0||(type==="rsi"&&threshold>100)){say("Choose a listing and valid threshold (RSI 0–100).");return;}
   change(data=>{if(data.alerts.length>=50)throw Error();data.alerts.push({id,type,direction,threshold,triggered:false});});
  });
  // Refresh one listing explicitly: never fan out across a large watchlist.
  $("equity-check")?.addEventListener("click",async()=>{
   const id=$("equity-alert-listing").value;if(!valid(id)){say("Choose one saved listing to check.");return;}
-  const button=$("equity-check");if(button.disabled)return;button.disabled=true;
+  try{if(!read().alerts.some(a=>a.id===id)){say("Save an alert rule for this listing before checking it.");return;}}catch(error){say(error.message);return;}
+  const button=$("equity-check");if(button.disabled||alertChecking)return;alertChecking=true;button.disabled=true;
   const output=$("equity-check-result");output.replaceChildren();say("Checking completed sessions for the selected listing…");
   try {
    const research=await request(`/v1/stock-analysis?asset_id=${encodeURIComponent(id)}&days=90`);
@@ -110,11 +154,11 @@
     const value=a.type==="price"?latest.price:research.indicators?.rsi_14;
     if(!Number.isFinite(value)){output.append(el("p",`${a.type}: unavailable; previous state retained.`));continue;}
     const match=a.direction==="above"?value>a.threshold:value<a.threshold;
-    output.append(el("p",`${a.type} ${format(value)} on ${latest.date}: ${match?(a.triggered?"still matches":"NEW MATCH"):"condition not met"}.`));
+    output.append(el("p",`${a.type==="price"?"Closing price":"RSI (14)"} ${a.type==="price"?priceLabel(value):format(value)} on ${latest.date}: ${match?(a.triggered?"still matches":"NEW MATCH"):"condition not met"}.`));
     a.triggered=match;changed=true;
    }
    if(changed)save(data);render();output.append(el("p",`Checked ${new Date().toISOString()} · history fetched ${research.history_source?.fetched_at_utc || "time unavailable"}.`));say("Check complete. Prices are completed-session values, not live quotes.");
-  }catch(error){say(error.message);}finally{button.disabled=false;}
+  }catch(error){say(error.message);}finally{alertChecking=false;button.disabled=false;updateAlertHelp();}
  });
  $("equity-value")?.addEventListener("click",async()=>{
   const id=$("equity-holding").value;let holding;
@@ -211,4 +255,5 @@
  if(valid(requestedListing)&&$('equity-alert-listing')){
   try{if(read().listings.some(a=>a.id===requestedListing))$('equity-alert-listing').value=requestedListing;}catch{say('Saved watchlist could not be read.');}
  }
+ updateAlertHelp();
 })();

@@ -49,3 +49,13 @@ button,.button{background:#99b6ff;color:#111b32;border:1px solid #99b6ff;border-
 .comparison-result{background:#191e28;border:1px solid #303a4c;border-radius:10px;padding:18px;margin:14px 0}.comparison-result h3{font-size:1rem}.comparison-return{font-size:2rem;font-weight:700;margin:10px 0;font-variant-numeric:tabular-nums}
 
 .synthetic-demo-banner{background:#23213b;border:2px solid #9386cf;border-radius:10px;padding:16px;margin:0 0 24px;color:#f1edff}.synthetic-demo-banner strong{display:block;font-size:.9rem}.synthetic-demo-banner p{margin:8px 0 0;font-size:.8rem}body[data-demo="true"] .price-chart::before,body[data-demo="true"] .comparison-result::before{content:"SYNTHETIC DATA · DEMONSTRATION ONLY";display:block;color:#d1baff;font-size:.7rem;letter-spacing:.06em;margin-bottom:12px}body[data-demo="true"] #simulation-results:not(:empty)::before{content:"Illustration using fictional prices";display:block;color:#d1baff;font-weight:600;margin:18px 0}
+
+/* Beginner help stays optional; essential alert instructions remain beside fields. */
+.beginner-help{margin:0 0 1.5rem;padding:1rem 1.25rem;border:1px solid var(--border,#334155);border-radius:12px;background:var(--panel,#171d29)}
+.beginner-help>summary,.listing-picker>summary{font-weight:650;cursor:pointer;color:var(--text,#edf2fa)}
+.glossary-terms{max-height:28rem;overflow:auto;overscroll-behavior:contain}
+.glossary-terms>div{display:block;padding:.8rem 0;border-bottom:1px solid var(--border,#334155)}
+.glossary-terms dt{font-weight:650}.glossary-terms dd{margin:.35rem 0 0;line-height:1.6}
+.listing-picker{margin:1rem 0;padding:1rem;border:1px solid var(--border,#334155);border-radius:10px}
+.listing-picker label{display:block;margin:.8rem 0}.listing-picker select,.listing-picker input{width:100%;max-width:100%;min-width:0}
+#equity-threshold-help,#equity-alert-preview{line-height:1.6}#equity-alert-preview{font-weight:600}

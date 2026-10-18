@@ -500,3 +500,5 @@ test('direct demo ETF links load the ETF catalog rather than stocks',async()=>{
  assert.equal(s.requests[0].url,'/v1/assets?asset_class=etf');
  s.answer(0,{assets:[]});await pending;
 });
+
+require('./help.test.cjs');
