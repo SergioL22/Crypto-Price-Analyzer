@@ -42,4 +42,9 @@
  const count=el('p'),list=el('dl');count.setAttribute('role','status');count.setAttribute('aria-live','polite');list.className='glossary-terms';
  function render(){const query=search.value.trim().toLowerCase(),matches=terms.filter(([term,meaning])=>(term+' '+meaning).toLowerCase().includes(query));list.replaceChildren();for(const [term,meaning]of matches){const row=el('div');row.append(el('dt',term),el('dd',meaning));list.append(row);}count.textContent=matches.length?`${matches.length} ${matches.length===1?'term':'terms'}. Definitions describe how this app uses them.`:'No matching terms. Try a shorter word or clear the search.';}
  search.addEventListener('input',render);root.append(label,count,list);render();
+ const panel=$('beginner-help'),open=$('beginner-help-open'),close=$('beginner-help-close');
+ open?.addEventListener('click',()=>{if(!panel.open){panel.showModal();search.focus();}});
+ close?.addEventListener('click',()=>panel.close());
+ panel?.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();panel.close();}});
+ panel?.addEventListener('close',()=>open?.focus());
 })();

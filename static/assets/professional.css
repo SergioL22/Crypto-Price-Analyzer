@@ -51,11 +51,19 @@ button,.button{background:#99b6ff;color:#111b32;border:1px solid #99b6ff;border-
 .synthetic-demo-banner{background:#23213b;border:2px solid #9386cf;border-radius:10px;padding:16px;margin:0 0 24px;color:#f1edff}.synthetic-demo-banner strong{display:block;font-size:.9rem}.synthetic-demo-banner p{margin:8px 0 0;font-size:.8rem}body[data-demo="true"] .price-chart::before,body[data-demo="true"] .comparison-result::before{content:"SYNTHETIC DATA · DEMONSTRATION ONLY";display:block;color:#d1baff;font-size:.7rem;letter-spacing:.06em;margin-bottom:12px}body[data-demo="true"] #simulation-results:not(:empty)::before{content:"Illustration using fictional prices";display:block;color:#d1baff;font-weight:600;margin:18px 0}
 
 /* Beginner help stays optional; essential alert instructions remain beside fields. */
-.beginner-help{margin:0 0 1.5rem;padding:1rem 1.25rem;border:1px solid var(--border,#334155);border-radius:12px;background:var(--panel,#171d29)}
-.beginner-help>summary,.listing-picker>summary{font-weight:650;cursor:pointer;color:var(--text,#edf2fa)}
+header{display:flow-root}
+header .help-trigger{float:right;margin:0 0 12px 16px;white-space:nowrap}
+.help-panel{position:fixed;inset:0 0 0 auto;margin:0;width:min(44rem,100%);max-width:100%;height:100dvh;max-height:100dvh;box-sizing:border-box;padding:24px;border:0;border-left:1px solid var(--line);background:#171d29;color:var(--text);overflow:auto;box-shadow:-16px 0 48px #0006}
+.help-panel:not([open]){display:none}.help-panel::backdrop{background:#0009}
+.help-panel-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
+.help-panel-heading h2{margin:0}.help-panel input{width:100%;box-sizing:border-box;margin-top:8px}
+.listing-picker>summary{font-weight:650;cursor:pointer;color:var(--text,#edf2fa)}
+@media(max-width:600px){header .help-trigger{float:none;display:block;margin:0 0 12px auto;font-size:.8rem}.help-panel{padding:18px}.help-panel .glossary-terms{max-height:none;overflow:visible}}
 .glossary-terms{max-height:28rem;overflow:auto;overscroll-behavior:contain}
 .glossary-terms>div{display:block;padding:.8rem 0;border-bottom:1px solid var(--border,#334155)}
 .glossary-terms dt{font-weight:650}.glossary-terms dd{margin:.35rem 0 0;line-height:1.6}
 .listing-picker{margin:1rem 0;padding:1rem;border:1px solid var(--border,#334155);border-radius:10px}
 .listing-picker label{display:block;margin:.8rem 0}.listing-picker select,.listing-picker input{width:100%;max-width:100%;min-width:0}
 #equity-threshold-help,#equity-alert-preview{line-height:1.6}#equity-alert-preview{font-weight:600}
+
+header>.tag{position:static;display:inline-block}
