@@ -15,7 +15,7 @@ class Element {
  setAttribute(key, value) { this[key]=value; }
  reportValidity() { return true; }
 }
-function setup(storage = new Map(),debounce=false) {
+function setup(storage = new Map(),debounce=false,route=null) {
  const elements=Object.fromEntries(['load-coins','catalog-status','coin-search','coin-options','coin-search-status','coin-quick','selected-coin','coin','days','include-position','amount','cost','status','analysis','ai','analysis-form','recommend'].map(id=>[id,new Element()]));
  elements.coin.value='bitcoin'; elements.days.value='90'; elements.amount.value='0'; elements.cost.value='0';
  const requests=[],documentEvents={};
@@ -37,7 +37,8 @@ function setup(storage = new Map(),debounce=false) {
  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../static/assets/visuals.js'), 'utf8'),context);
  vm.runInNewContext(source,context);
  context.localStorage={getItem:key=>storage.get(key) ?? null,setItem:(key,value)=>storage.set(key,value)};
- const windowEvents={}; context.window={addEventListener:(name,fn)=>{windowEvents[name]=fn;}};
+ if(route){context.URLSearchParams=URLSearchParams;context.document.body.dataset={demo:route.demo?'true':'false'};}
+ const windowEvents={}; context.window={location:route?{search:route.search}:undefined,addEventListener:(name,fn)=>{windowEvents[name]=fn;}};
  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../static/assets/watchlist.js'), 'utf8'),context);
  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../static/assets/portfolio.js'), 'utf8'),context);
  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../static/assets/holdings.js'), 'utf8'),context);
@@ -375,7 +376,7 @@ test('malformed evidence is rejected instead of displayed as missing data',async
 
 test('safe AI error is rendered literally while evidence remains available',async()=>{const s=setup();const p=s.click();s.answer(0,{recommendation_status:'unavailable',evidence:evidence(),recommendation:null,ai_error:{code:'ai_unavailable',message:'Provider unavailable <img onerror=alert(1)>'}});await p;assert.match(s.elements.ai.textContent,/Provider unavailable <img onerror=alert\(1\)>/);assert.match(s.elements.ai.textContent,/189/);});
 for (const message of ['Failed to fetch','NetworkError when attempting to fetch resource.','Load failed']) {
- test('connection failure normalized: '+message,async()=>{const s=setup();const p=s.click();s.requests[0].reject(new TypeError(message));await p;assert.match(s.elements.ai.textContent,/Could not connect to the local server/);assert.equal(s.elements.recommend.disabled,false);assert.equal(s.requests.length,1);});
+ test('connection failure normalized: '+message,async()=>{const s=setup();const p=s.click();s.requests[0].reject(new TypeError(message));await p;assert.match(s.elements.ai.textContent,/Could not connect to the service/);assert.equal(s.elements.recommend.disabled,false);assert.equal(s.requests.length,1);});
 }
 
 function descendants(n) { return [n,...n.children.flatMap(descendants)]; }
@@ -489,3 +490,13 @@ test('rapid search input coalesces and still finds listings outside the rendered
 });
 
 require('./screening-feed.test.cjs');
+
+require('./request.test.cjs');
+
+test('direct demo ETF links load the ETF catalog rather than stocks',async()=>{
+ const s=setup(new Map(),false,{demo:true,search:'?asset=demo%3Aetf%3AARCX%3AUSD%3ASIMFND'});
+ assert.equal(s.elements['stock-kind'].value,'etf');
+ const pending=s.elements['stock-load'].listeners.click();
+ assert.equal(s.requests[0].url,'/v1/assets?asset_class=etf');
+ s.answer(0,{assets:[]});await pending;
+});

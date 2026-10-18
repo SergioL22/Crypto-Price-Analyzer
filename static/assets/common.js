@@ -3,13 +3,34 @@ const $ = id => document.getElementById(id);
 const el = (tag, text) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; return n; };
 const format = value => value === null || value === undefined ? "N/A" : typeof value === "number" ? new Intl.NumberFormat("en-US", {maximumFractionDigits: 6}).format(value) : typeof value === "object" ? JSON.stringify(value) : String(value);
 const priceLabel = value => !Number.isFinite(value) ? "N/A" : "$" + new Intl.NumberFormat("en-US", value > 0 && value < 1 ? {minimumSignificantDigits:3,maximumSignificantDigits:6} : {minimumFractionDigits:2,maximumFractionDigits:2}).format(value);
+// Bound read requests, including response bodies. Never automatically retry a
+// request: provider quotas and explicit user actions must remain predictable.
 async function request(url, options) {
+ if ((options?.method || "GET").toUpperCase() !== "GET" || typeof AbortController === "undefined") return requestOnce(url, options);
+ const controller = new AbortController(), external = options?.signal;
+ const abort = () => controller.abort();
+ if (external?.aborted) abort(); else external?.addEventListener("abort", abort, {once:true});
+ let timer;
+ try {
+  return await Promise.race([
+   requestOnce(url, {...options, signal:controller.signal}),
+   new Promise((_, reject) => { timer=setTimeout(() => {
+    reject(new Error("Loading took too long. The service may be waking up or the connection may be slow. Try again when you are ready."));
+    controller.abort();
+   }, 75000); })
+  ]);
+ } finally {
+  clearTimeout(timer);
+  external?.removeEventListener("abort", abort);
+ }
+}
+async function requestOnce(url, options) {
  let response;
  try { response = await fetch(url, options); }
- catch { throw new Error("Could not connect to the local server."); }
+ catch { throw new Error("Could not connect to the service. Check your connection and try again."); }
  let body; try { body = await response.json(); } catch { throw new Error("The server returned an invalid response."); }
  if (!response.ok) {
-  const messages = {403: "Request origin is not allowed. Open the configured local address.", 422: "Check the coin, days, and position fields.", 429: "Server is busy. Try again later.", 502: "Market data is unavailable or invalid. Check the selected CoinGecko ID; the provider may also be temporarily unavailable.", 503: "History is insufficient or stale. Try a longer window or another coin; some coins do not have enough recent data.", 500: "An unexpected server error occurred."};
+  const messages = {401: "Your session is unavailable. Reload the page to sign in again.", 403: "This address or request is not allowed. Open the app from its configured website address.", 422: "Check the selected asset, dates, and entered values.", 429: "Server is busy. Try again later.", 502: "Market data is unavailable or invalid. Check the selected CoinGecko ID; the provider may also be temporarily unavailable.", 503: "History is insufficient or stale. Try a longer window or another coin; some coins do not have enough recent data.", 500: "An unexpected server error occurred."};
   const stockErrors = {
    stock_setup_required: "Set TWELVE_DATA_API_KEY on the server and restart it to enable stocks and ETFs.",
    profile_rate_limited: "Company profile requests are temporarily limited. Retry manually later.",

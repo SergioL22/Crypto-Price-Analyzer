@@ -13,7 +13,7 @@
   filterPanel.hidden = !open;
  });
  document.addEventListener?.("keydown", event => { if (event.key === "Escape" && filterPanel && !filterPanel.hidden) { filterPanel.hidden = true; filterToggle._filterOpen = false; filterToggle.setAttribute("aria-expanded", "false"); filterToggle.focus?.(); } });
- if(requested?.startsWith("twelvedata:etf:")) kind.value="etf";
+ if(requested?.startsWith(demoWorkspace()?"demo:etf:":"twelvedata:etf:")) kind.value="etf";
  function invalidate() { revision++; result.replaceChildren(); if($("stock-empty"))$("stock-empty").hidden=false; status.setAttribute("data-state","idle");status.textContent = ""; }
  function renderListing(){
   const root=$('stock-listing-summary');if(!root)return;const asset=assets.find(a=>a.id===select.value);if(asset&&root._listingId===asset.id)return;root._listingId=asset?.id||null;root.replaceChildren();root.hidden=!asset;if(!asset)return;
