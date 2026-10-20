@@ -2,6 +2,8 @@
 
 Implemented locally October 20, 2026. Not yet published or verified on Render.
 
+Update: Initial release and widget-domain fix were published as cc0790a and f9ddb33. The hosted Apple chart was verified rendering. Follow-up checks verified SPY chart rendering, watchlist save/reload/open/remove, an empty search with disabled actions, and a 390px viewport without horizontal overflow. Added an asset-type filter, result counts, active navigation and a return link from synthetic practice. Provider permission inquiry is prepared in FREE_DATA_PERMISSION_REQUEST.md, not sent. Full real-price calculations remain blocked on permission and appropriate usage enforcement.
+
 The existing demo factory optionally serves a real-market landing page and browser-local symbol watchlist when `PUBLIC_MARKET_WIDGETS=1`. The Render demo blueprint now requests this setting. The private preview configuration is unchanged. No provider API key is needed for the public page. Synthetic APIs remain synthetic; `/stocks.html`, simulator and alerts are explicitly practice tools.
 
 Fourteen curated US stock/ETF listings can be saved in a separate browser storage namespace. The embedded chart has its own wider symbol search; changing its symbol does not change our selected listing or saved symbol. Charts load only after a visitor chooses Load market chart. TradingView branding and external links remain visible. Availability/delay depends on TradingView's widget feed. The app does not extract chart prices or use them in alerts, simulations or prediction research.

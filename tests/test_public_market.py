@@ -17,8 +17,11 @@ def test_market_page_is_opt_in_and_practice_stays_isolated(monkeypatch):
         assert 'https://www.tradingview.com' in response.headers['content-security-policy']
         assert 'https://*.tradingview-widget.com' in response.headers['content-security-policy']
         assert '/assets/stocks.js' not in response.text
+        assert 'listing-kind' in response.text
+        assert 'listing-matches' in response.text
     practice=client.get('/stocks.html')
     assert 'SYNTHETIC DEMO' in practice.text
+    assert 'Back to real market charts' in practice.text
     assert 'tradingview.com' not in practice.headers['content-security-policy']
     assert client.get('/v1/portfolio').status_code==404
     assert client.get('/v1/recommendations').status_code==404

@@ -146,6 +146,8 @@ def create_app():
         name=PAGES.get('/'+page)
         if not name:return JSONResponse(status_code=404,content={'error':{'code':'not_found','message':'Not part of the synthetic demo.'}})
         content=(ROOT/name).read_text(encoding='utf-8')
+        if os.environ.get('PUBLIC_MARKET_WIDGETS')=='1':
+            content=content.replace('<header>','<p class="hosted-preview-note"><a href="/">Back to real market charts &amp; watchlist</a> · Synthetic practice area</p><header>',1)
         content=content.replace('<body ', '<body data-demo="true" ',1)
         content=content.replace('<header>',f'<aside class="synthetic-demo-banner" role="note"><strong>{NOTICE}</strong><p>Try the interface with fictional data. Saved demo items stay in this browser and are separate from your private workspace.</p></aside><header>',1)
         content=content.replace('uses provider quota','uses demo request budget').replace('Research only · no trade execution · historical closing prices · split-adjusted · excludes dividends.','Synthetic demonstration only · generated prices · no trades or predictions.')
