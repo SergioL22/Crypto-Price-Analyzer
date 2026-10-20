@@ -10,3 +10,6 @@ services:
     dockerContext: .
     healthCheckPath: /health
     autoDeployTrigger: checksPass
+    envVars:
+      - key: PUBLIC_MARKET_WIDGETS
+        value: "1"

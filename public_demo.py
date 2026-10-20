@@ -102,6 +102,9 @@ def create_app():
         response.headers.update({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY',
             'Referrer-Policy':'no-referrer','X-Research-Data':'synthetic',
             'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"})
+        if os.environ.get('PUBLIC_MARKET_WIDGETS')=='1' and request.url.path in ('/','/index.html','/market-watchlist.html'):
+            response.headers['X-Research-Data']='embedded-market'
+            response.headers['Content-Security-Policy']="default-src 'none'; script-src 'self' https://s3.tradingview.com; style-src 'self'; frame-src https://www.tradingview.com https://s.tradingview.com; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
         if origin.startswith('https:'):response.headers['Strict-Transport-Security']='max-age=31536000'
         return response
 
@@ -137,6 +140,9 @@ def create_app():
 
     @app.get('/{page:path}')
     def page(page:str):
+        if os.environ.get('PUBLIC_MARKET_WIDGETS')=='1' and page in ('','index.html','market-watchlist.html'):
+            content=(ROOT/'public-market.html').read_text(encoding='utf-8')
+            return HTMLResponse(content)
         name=PAGES.get('/'+page)
         if not name:return JSONResponse(status_code=404,content={'error':{'code':'not_found','message':'Not part of the synthetic demo.'}})
         content=(ROOT/name).read_text(encoding='utf-8')

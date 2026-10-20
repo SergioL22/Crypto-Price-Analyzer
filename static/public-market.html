@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stocks &amp; ETFs · Research Desk</title>
+<link rel="stylesheet" href="/assets/public-market.css"><script defer src="/assets/public-market.js"></script></head>
+<body><a href="#main" class="skip">Skip to content</a><main id="main">
+<header><p class="eyebrow">MARKET RESEARCH</p><h1>Stocks &amp; ETFs</h1><p>Explore real market charts. Keep the companies and funds you follow in one place.</p></header>
+<nav aria-label="Workspace"><a href="/">Explore</a><a href="/market-watchlist.html">Watchlist</a><a href="/stocks.html">Synthetic practice tools</a></nav>
+<aside class="notice">Market charts are provided by TradingView. Data may be delayed or unavailable for some symbols. No AI predictions or trade execution.</aside>
+<section aria-labelledby="find-title"><h2 id="find-title">Choose a company or fund</h2><label for="listing">Search these starter listings</label><input id="listing-search" type="search" placeholder="Company, fund or ticker" aria-controls="listing"><select id="listing" aria-label="Company or fund"></select>
+<p>For more listings, use the symbol search inside the chart. Our save button saves the listing selected above, not changes made inside the chart.</p>
+<button id="open-chart" type="button">Load market chart</button> <button id="save-symbol" type="button">Save selected listing</button>
+<p id="market-status" role="status" aria-live="polite">Choose a listing, then load its chart.</p>
+<div id="market-chart" class="chart" aria-label="TradingView market chart"><p>Load a chart to connect to TradingView. Your browser will contact this third-party service.</p></div>
+<p><a id="chart-fallback" href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">Open chart on TradingView</a> if the embedded chart is unavailable.</p></section>
+<section aria-labelledby="saved-title"><h2 id="saved-title">Your watchlist</h2><p>Saved symbols stay in this browser. They do not sync between devices. Prices and performance are not copied from the embedded chart.</p><ul id="market-saved"></ul></section>
+<details><summary>Help &amp; glossary</summary><dl><dt>Ticker</dt><dd>A short code identifying a stock or fund, such as AAPL.</dd><dt>ETF</dt><dd>An exchange-traded fund: a basket of investments traded on an exchange.</dd><dt>Candlestick</dt><dd>A chart bar showing the opening, highest, lowest and closing prices for a period.</dd><dt>Delayed data</dt><dd>Prices shown after a time delay rather than immediately as trades occur. Check the chart's data status.</dd><dt>Practice tools</dt><dd>The simulator and alerts use fictional listings and generated prices. They do not monitor real stocks.</dd></dl></details>
+<footer>Charts powered by <a href="https://www.tradingview.com/" target="_blank" rel="noopener noreferrer">TradingView</a>. Research only. Chart data is not available to our simulator, alert engine or AI research.</footer>
+</main></body></html>
