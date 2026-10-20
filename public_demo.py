@@ -104,7 +104,7 @@ def create_app():
             'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"})
         if os.environ.get('PUBLIC_MARKET_WIDGETS')=='1' and request.url.path in ('/','/index.html','/market-watchlist.html'):
             response.headers['X-Research-Data']='embedded-market'
-            response.headers['Content-Security-Policy']="default-src 'none'; script-src 'self' https://s3.tradingview.com; style-src 'self'; frame-src https://www.tradingview.com https://s.tradingview.com; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+            response.headers['Content-Security-Policy']="default-src 'none'; script-src 'self' https://s3.tradingview.com; style-src 'self'; frame-src https://www.tradingview.com https://s.tradingview.com https://tradingview-widget.com https://*.tradingview-widget.com; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
         if origin.startswith('https:'):response.headers['Strict-Transport-Security']='max-age=31536000'
         return response
 

@@ -15,6 +15,7 @@ def test_market_page_is_opt_in_and_practice_stays_isolated(monkeypatch):
         assert response.headers['x-research-data']=='embedded-market'
         assert 'https://s3.tradingview.com' in response.headers['content-security-policy']
         assert 'https://www.tradingview.com' in response.headers['content-security-policy']
+        assert 'https://*.tradingview-widget.com' in response.headers['content-security-policy']
         assert '/assets/stocks.js' not in response.text
     practice=client.get('/stocks.html')
     assert 'SYNTHETIC DEMO' in practice.text
