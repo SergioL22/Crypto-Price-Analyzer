@@ -9,7 +9,7 @@ def test_market_page_is_opt_in_and_practice_stays_isolated(monkeypatch):
     client=TestClient(create_app(),base_url='https://testserver')
     assert 'SYNTHETIC DEMO' in client.get('/').text
     monkeypatch.setenv('PUBLIC_MARKET_WIDGETS','1')
-    for path in ('/','/index.html','/market-watchlist.html'):
+    for path in ('/market-charts.html','/market-watchlist.html'):
         response=client.get(path)
         assert response.status_code==200
         assert response.headers['x-research-data']=='embedded-market'
@@ -21,7 +21,13 @@ def test_market_page_is_opt_in_and_practice_stays_isolated(monkeypatch):
         assert 'listing-matches' in response.text
     practice=client.get('/stocks.html')
     assert 'SYNTHETIC DEMO' in practice.text
-    assert 'Back to real market charts' in practice.text
+    assert 'Open TradingView chart' in practice.text
+    for path in ('/','/index.html'):
+        original=client.get(path)
+        assert 'SYNTHETIC DEMO' in original.text
+        assert '/assets/stocks.js' in original.text
+        assert 'Open TradingView chart' in original.text
+        assert 'tradingview.com' not in original.headers['content-security-policy']
     assert 'tradingview.com' not in practice.headers['content-security-policy']
     assert client.get('/v1/portfolio').status_code==404
     assert client.get('/v1/recommendations').status_code==404

@@ -67,3 +67,4 @@ header .help-trigger{float:right;margin:0 0 12px 16px;white-space:nowrap}
 #equity-threshold-help,#equity-alert-preview{line-height:1.6}#equity-alert-preview{font-weight:600}
 
 header>.tag{position:static;display:inline-block}
+.chart-choice{margin:16px 0;padding:18px;border:1px solid #617fac;border-radius:10px;background:#192537}.chart-choice-link{display:inline-block;padding:12px 18px;background:#345b90;border-radius:7px;color:#fff;font-weight:700;text-decoration:none}.chart-choice p{margin:10px 0 0;line-height:1.5}.chart-choice-link:focus-visible{outline:3px solid #b4d0ff;outline-offset:3px}
