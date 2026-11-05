@@ -13,3 +13,5 @@ services:
     envVars:
       - key: PUBLIC_MARKET_WIDGETS
         value: "1"
+      - key: PUBLIC_SEC_RESEARCH
+        value: "1"

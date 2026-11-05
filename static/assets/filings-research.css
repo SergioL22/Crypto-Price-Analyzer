@@ -1,0 +1,28 @@
+.controls{display:flex;flex-wrap:wrap;gap:0 18px}.controls>div{flex:1 1 220px;min-width:0}
+.meta{font-size:.9rem;color:#a9bad5}
+h3{font-size:1.05rem;margin:26px 0 6px}
+.chart-figure{margin:16px 0}.chart-figure figcaption{font-size:.85rem;color:#a9bad5;margin-top:6px}
+.bar-chart{background:#101722;border:1px solid #2b3647;border-radius:8px;padding:10px;min-height:120px}
+.bar-chart svg{display:block;width:100%;height:auto}
+.bar-chart .bar{fill:#7fa9f0}.bar-chart .bar.negative{fill:#e98a8a}.bar-chart .bar.latest{fill:#b6cff8}
+.bar-chart .axis{stroke:#53637c;stroke-width:1}.bar-chart .grid{stroke:#253246;stroke-width:1}
+.bar-chart text{fill:#a9bad5;font-size:11px;font-family:system-ui,sans-serif}.bar-chart .value{fill:#edf1fa;font-size:10.5px}
+.bar-chart>p{margin:24px 8px}
+.table-box{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+caption{text-align:left;color:#a9bad5;font-size:.82rem;padding:4px 0 8px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #2b3647;vertical-align:top}
+th{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:#a9bad5;font-weight:600}
+td.num,th.num{text-align:right;white-space:nowrap}
+.weight{display:flex;align-items:center;gap:8px;min-width:140px}.weight span{min-width:52px;text-align:right}
+.weight meter{flex:1;height:8px;min-width:60px}
+.up{color:#8fd9a8}.down{color:#f0a0a0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:14px 0}
+.stats div{background:#101722;border:1px solid #2b3647;border-radius:8px;padding:12px 14px}
+.stats dt{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:#a9bad5;font-weight:600;margin:0}
+.stats dd{margin:4px 0 0;font-size:1.25rem;color:#edf1fa;font-variant-numeric:tabular-nums}
+.filings{list-style:none;padding:0;margin:0}.filings li{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;border-bottom:1px solid #2b3647;padding:8px 0}
+.filings .form{font-family:ui-monospace,Consolas,monospace;font-size:.8rem;background:#22324a;color:#d6e4ff;border-radius:4px;padding:2px 7px;min-width:64px;text-align:center}
+.filings time{color:#a9bad5;font-size:.88rem;font-variant-numeric:tabular-nums}
+.filings a{overflow-wrap:anywhere}
+.note{font-size:.88rem;color:#d9c48a}

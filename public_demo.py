@@ -1,6 +1,7 @@
 """Anonymous synthetic-only demonstration. No credentials or live transports."""
 from datetime import datetime,timezone
 from urllib.parse import urlsplit
+import json
 import math
 import os
 from threading import BoundedSemaphore
@@ -19,6 +20,26 @@ from stock_provider import StockDataError
 from stock_models import AssetCatalog,StockResearch
 from profile_models import CompanyProfileResponse
 from hosted_preview import RequestBudget,PAGES,ROOT
+import sec_edgar
+from sec_edgar import SNAPSHOT as SEC_SNAPSHOT
+
+SEC_NOTICE=('Company fundamentals, filings and ETF holdings come from public SEC EDGAR filings. '
+            'Values are as reported to the SEC and are refreshed periodically, not live. No stock prices are used. Research only, not advice.')
+
+
+class SecUnavailable(Exception):
+    def __init__(self,status,code,message):
+        super().__init__(message);self.status=status;self.code=code;self.message=message
+
+
+_sec_cache={}
+def sec_snapshot(path=None):
+    """The SEC research snapshot, read once per process. The web app never calls EDGAR itself."""
+    path=path or SEC_SNAPSHOT
+    if path not in _sec_cache:
+        try:_sec_cache[path]=json.loads(path.read_text(encoding='utf-8'))
+        except (OSError,ValueError):raise SecUnavailable(503,'sec_snapshot_missing','SEC research data has not been generated for this deployment.')
+    return _sec_cache[path]
 
 NOTICE='SYNTHETIC DEMO — fictional companies and generated prices. Not live or historical market data. No AI predictions or trades.'
 DEFINITIONS=(
@@ -105,6 +126,9 @@ def create_app():
         if os.environ.get('PUBLIC_MARKET_WIDGETS')=='1' and request.url.path in ('/market-charts.html','/market-watchlist.html'):
             response.headers['X-Research-Data']='embedded-market'
             response.headers['Content-Security-Policy']="default-src 'none'; script-src 'self' https://s3.tradingview.com; style-src 'self'; frame-src https://www.tradingview.com https://s.tradingview.com https://tradingview-widget.com https://*.tradingview-widget.com; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+        if os.environ.get('PUBLIC_SEC_RESEARCH')=='1' and (request.url.path=='/filings-research.html' or request.url.path.startswith('/v1/sec/')):
+            response.headers['X-Research-Data']='sec-public'
+            if request.url.path.startswith('/v1/sec/') and response.status_code==200:response.headers['Cache-Control']='public, max-age=3600'
         if origin.startswith('https:'):response.headers['Strict-Transport-Security']='max-age=31536000'
         return response
 
@@ -116,6 +140,8 @@ def create_app():
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request,error):
+        if request.url.path.startswith('/v1/sec/'):
+            return JSONResponse(status_code=422,content={'error':{'code':'invalid_request','message':'Use an uppercase ticker from the covered list, such as AAPL or SPY.'}})
         return JSONResponse(status_code=422,content={'error':{'code':'invalid_request','message':'Choose a fictional listing and a history window of 1–3660 days.'}})
 
     @app.get('/v1/assets',response_model=AssetCatalog)
@@ -136,12 +162,51 @@ def create_app():
     def company_profile(asset_id:str=Query(min_length=1,max_length=250)):
         with admission():return stocks.company_profile(asset_id,datetime.now(timezone.utc))
 
+    def sec_data():
+        if os.environ.get('PUBLIC_SEC_RESEARCH')!='1':raise SecUnavailable(404,'not_found','Not part of the synthetic demo.')
+        return sec_snapshot()
+
+    def sec_symbol(records,symbol,kind):
+        record=records.get(symbol)
+        if record is None:raise SecUnavailable(404,'symbol_not_covered',f'{symbol} is not in the {kind} list.')
+        return record
+
+    @app.exception_handler(SecUnavailable)
+    async def sec_error(request,error):
+        return JSONResponse(status_code=error.status,content={'error':{'code':error.code,'message':error.message}})
+
+    @app.get('/v1/sec/coverage')
+    def sec_coverage():
+        data=sec_data()
+        return dict(generated_at_utc=data['generated_at_utc'],source=data['source'],notice=SEC_NOTICE,
+                    companies=[dict(symbol=c['symbol'],name=c['name']) for c in data['companies'].values()],
+                    funds=[dict(symbol=f['symbol'],name=f['name'],period_end=f['period_end']) for f in data['funds'].values()])
+
+    @app.get('/v1/sec/company')
+    def sec_company(symbol:str=Query(pattern=r'^[A-Z]{1,5}$')):
+        data=sec_data();return dict(sec_symbol(data['companies'],symbol,'company'),generated_at_utc=data['generated_at_utc'])
+
+    @app.get('/v1/sec/fund')
+    def sec_fund(symbol:str=Query(pattern=r'^[A-Z]{1,5}$')):
+        data=sec_data();fund=sec_symbol(data['funds'],symbol,'ETF')
+        return dict({k:v for k,v in fund.items() if k!='holdings'},summary=sec_edgar.fund_summary(fund),generated_at_utc=data['generated_at_utc'])
+
+    @app.get('/v1/sec/overlap')
+    def sec_overlap(a:str=Query(pattern=r'^[A-Z]{1,5}$'),b:str=Query(pattern=r'^[A-Z]{1,5}$')):
+        data=sec_data();left,right=sec_symbol(data['funds'],a,'ETF'),sec_symbol(data['funds'],b,'ETF')
+        if a==b:raise SecUnavailable(422,'same_fund','Choose two different ETFs.')
+        return dict(sec_edgar.overlap(left,right),a=dict(symbol=a,period_end=left['period_end']),b=dict(symbol=b,period_end=right['period_end']))
+
     app.mount('/assets',StaticFiles(directory=ROOT/'assets'),name='assets')
 
     @app.get('/{page:path}')
     def page(page:str):
+        if os.environ.get('PUBLIC_SEC_RESEARCH')=='1' and page=='filings-research.html':
+            return HTMLResponse((ROOT/'filings-research.html').read_text(encoding='utf-8'))
         if os.environ.get('PUBLIC_MARKET_WIDGETS')=='1' and page in ('market-charts.html','market-watchlist.html'):
             content=(ROOT/'public-market.html').read_text(encoding='utf-8')
+            if os.environ.get('PUBLIC_SEC_RESEARCH')=='1':
+                content=content.replace('<a href="/market-watchlist.html">Market watchlist</a>','<a href="/market-watchlist.html">Market watchlist</a><a href="/filings-research.html">Filings research</a>',1)
             return HTMLResponse(content)
         name=PAGES.get('/'+page)
         if not name:return JSONResponse(status_code=404,content={'error':{'code':'not_found','message':'Not part of the synthetic demo.'}})
