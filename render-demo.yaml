@@ -15,3 +15,7 @@ services:
         value: "1"
       - key: PUBLIC_SEC_RESEARCH
         value: "1"
+      # Optional: app name and contact email for live SEC filing checks, e.g. ResearchDesk/1.0 (you@example.com).
+      # Without it, filing alerts use the committed snapshot.
+      - key: SEC_USER_AGENT
+        sync: false

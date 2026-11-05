@@ -167,3 +167,63 @@ def test_committed_snapshot_is_well_formed():
     assert set(data['funds'])=={symbol for symbol,*_ in sec_refresh.ETFS}
     for fund in data['funds'].values():
         assert fund['holdings'] and 0.5<sum(h['weight'] for h in sec_edgar.positions(fund))<1.1
+
+
+import sec_live
+
+
+class Clock:
+    def __init__(self):self.now=1000.0
+    def __call__(self):return self.now
+
+
+LIVE_SUBMISSIONS={'cik':'123','filings':{'recent':{'form':['8-K'],'accessionNumber':['0001-26-000009'],'filingDate':['2026-11-04'],
+    'reportDate':['2026-11-03'],'primaryDocument':['event.htm'],'primaryDocDescription':['8-K']}}}
+
+
+def test_live_filings_cache_and_backoff():
+    clock=Clock();calls=[]
+    def fetch(cik):
+        calls.append(cik)
+        if len(calls)==2:raise OSError('SEC unavailable')
+        return LIVE_SUBMISSIONS
+    live=sec_live.LiveFilings(fetch,ttl=60,backoff=30,clock=clock,wall=lambda:1_790_000_000)
+    rows,_=live.filings(123);assert rows[0]['form']=='8-K' and len(calls)==1
+    live.filings(123);assert len(calls)==1          # cached
+    clock.now+=61;assert live.filings(123)[0]==rows   # refresh fails: previous rows kept
+    clock.now+=10;live.filings(123);assert len(calls)==2  # backing off after the failure
+    assert sec_live.LiveFilings(lambda cik:1/0).filings(1) is None
+
+
+def test_merge_filings_keeps_predecessor_rows_once():
+    merged=sec_live.merge_filings(sec_edgar.recent_filings(LIVE_SUBMISSIONS),sec_edgar.recent_filings(SUBMISSIONS))
+    assert [r['accession'] for r in merged]==['0001-26-000009','0001-26-000004','0001-26-000002']
+    assert len(sec_live.merge_filings(merged,merged))==3
+
+
+def live_client(monkeypatch,tmp_path,fetch):
+    path=tmp_path/'snapshot.json';path.write_text(json.dumps(SNAPSHOT),encoding='utf-8')
+    monkeypatch.setattr(public_demo,'SEC_SNAPSHOT',path);monkeypatch.setattr(public_demo,'_sec_cache',{})
+    monkeypatch.setenv('PUBLIC_DEMO_ORIGIN','https://testserver');monkeypatch.setenv('PUBLIC_SEC_RESEARCH','1')
+    return TestClient(public_demo.create_app(sec_fetch=fetch),base_url='https://testserver')
+
+
+def test_filings_endpoint_uses_live_data_with_snapshot_fallback(monkeypatch,tmp_path):
+    client=live_client(monkeypatch,tmp_path,lambda cik:LIVE_SUBMISSIONS)
+    response=client.get('/v1/sec/filings?symbols=EXM,ZZZ,EXM')
+    assert response.status_code==200 and response.headers['cache-control']=='public, max-age=300'
+    body=response.json();company=body['companies'][0]
+    assert len(body['companies'])==1 and body['uncovered']==['ZZZ']
+    assert company['filings_source']=='live' and company['filings'][0]['accession']=='0001-26-000009'
+    assert client.get('/v1/sec/company?symbol=EXM').json()['filings_source']=='live'
+    failing=live_client(monkeypatch,tmp_path,lambda cik:1/0)
+    company=failing.get('/v1/sec/filings?symbols=EXM').json()['companies'][0]
+    assert company['filings_source']=='snapshot' and [f['form'] for f in company['filings']]==['4','10-Q']
+    assert failing.get('/v1/sec/filings?symbols=exm').status_code==422
+    assert failing.get('/v1/sec/filings?symbols='+','.join(['AAA']*21)).status_code==422
+
+
+def test_without_user_agent_filings_come_from_snapshot(client,monkeypatch):
+    monkeypatch.setenv('PUBLIC_SEC_RESEARCH','1')
+    company=client.get('/v1/sec/filings?symbols=EXM').json()['companies'][0]
+    assert company['filings_source']=='snapshot' and company['filings_fetched_at_utc']==SNAPSHOT['generated_at_utc']

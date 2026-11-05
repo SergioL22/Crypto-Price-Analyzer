@@ -26,3 +26,8 @@ td.num,th.num{text-align:right;white-space:nowrap}
 .filings time{color:#a9bad5;font-size:.88rem;font-variant-numeric:tabular-nums}
 .filings a{overflow-wrap:anywhere}
 .note{font-size:.88rem;color:#d9c48a}
+fieldset{border:1px solid #2b3647;border-radius:8px;margin:12px 0;padding:10px 14px}legend{color:#a9bad5;font-size:.85rem;padding:0 6px}
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:2px 14px}
+label.check{display:flex;gap:8px;align-items:center;margin:6px 0;cursor:pointer}label.check input{width:auto;margin:0}
+.filings .badge{font-size:.7rem;font-weight:700;letter-spacing:.06em;background:#2f6b45;color:#e6f7ec;border-radius:4px;padding:2px 6px}
+.filings .empty{color:#a9bad5}

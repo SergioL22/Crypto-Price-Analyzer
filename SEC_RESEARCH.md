@@ -35,3 +35,12 @@ Notes:
 - **Multi-series trusts** (iShares Trust for IWM, Vanguard Index Funds for VTI) are looked up by fund series ID. The refresh fails if the filing does not cover that series.
 - **Fiscal years** use the SEC's calendar-year frames, which pick one de-duplicated annual value per company per year. Labels use the fiscal-year end date, so NVIDIA's year ending January 2026 shows as FY2026.
 - Banks and some other companies do not report every measure under the standard tags (for example, JPMorgan has no operating income or capital expenditure). Those charts say so rather than estimating.
+
+## Filing alerts
+
+The top of the page lets visitors follow any of the covered companies and choose filing types: reports, material events (8-K), insider trades (Form 4), and ownership, proxy and offering filings. Followed companies default to the visitor's market watchlist. Filings filed since the visitor last pressed **Mark all as seen** get a NEW badge. When a company is first followed, its existing filings count as seen, so only later filings are flagged. Choices and seen markers stay in that browser (`research-desk.filing-alerts.v1`). The check runs when the page opens or on **Check now**. There are no background jobs, emails or push notifications.
+
+`/v1/sec/filings?symbols=AAPL,MSFT` returns up to 20 recent filings per company with `filings_source` (`live` or `snapshot`) and `filings_fetched_at_utc`. `/v1/sec/company` uses the same source.
+
+- **Live filings** are on only when `SEC_USER_AGENT` is set (app name and contact email). The server then fetches each company's `submissions` feed at most once every 30 minutes and backs off for 5 minutes after a failure, so visitor traffic never reaches EDGAR. On Render, set it under the service's Environment settings. `render-demo.yaml` lists it with `sync: false`, so it is never stored in the repo.
+- **Without it**, or when EDGAR is unreachable, filings come from the committed snapshot, and the page says which source and time it is showing. Live rows are merged with the snapshot's, which keeps XOM's predecessor filings.
