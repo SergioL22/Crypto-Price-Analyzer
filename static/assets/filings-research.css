@@ -31,3 +31,8 @@ fieldset{border:1px solid #2b3647;border-radius:8px;margin:12px 0;padding:10px 1
 label.check{display:flex;gap:8px;align-items:center;margin:6px 0;cursor:pointer}label.check input{width:auto;margin:0}
 .filings .badge{font-size:.7rem;font-weight:700;letter-spacing:.06em;background:#2f6b45;color:#e6f7ec;border-radius:4px;padding:2px 6px}
 .filings .empty{color:#a9bad5}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}.legend-item{display:inline-flex;align-items:center;gap:6px}
+.swatch{display:inline-block;width:14px;height:3px;border-radius:2px}.swatch-0{background:#7fa9f0}.swatch-1{background:#e8b66b}.swatch-2{background:#8fd9a8}.swatch-3{background:#e98a8a}
+.sr-label{visibility:hidden}
+.filings li button{margin:0 0 0 auto}
+input[type=file]{padding:10px}

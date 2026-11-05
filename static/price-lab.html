@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your Price Data · Research Desk</title>
+<link rel="stylesheet" href="/assets/public-market.css"><link rel="stylesheet" href="/assets/filings-research.css">
+<script defer src="/assets/price-lab-core.js"></script><script defer src="/assets/price-lab.js"></script></head>
+<body><a href="#main" class="skip">Skip to content</a><main id="main">
+<header><p class="eyebrow">YOUR PRICE DATA</p><h1>Price tools on your own file</h1><p>Open a CSV of daily prices, such as an export from your broker or a spreadsheet. Research Desk charts it, calculates indicators and risk measures, compares funds, runs a hypothetical investment and checks your alert rules.</p></header>
+<nav aria-label="Workspace"><a href="/">Original chart · practice</a><a href="/market-charts.html">TradingView chart</a><a href="/market-watchlist.html">Market watchlist</a><a href="/filings-research.html">Filings research</a><a href="/price-lab.html">Your price data</a></nav>
+<aside class="notice">Your file never leaves this browser. It is read on your device, nothing is uploaded, and it is cleared when you close the tab. Results are only as accurate as the file. Research only, not advice.</aside>
+
+<section aria-labelledby="files-title"><h2 id="files-title">Your files</h2>
+<p>Each file needs a header row with a <strong>Date</strong> column and a <strong>Close</strong>, <strong>Adj Close</strong> or <strong>Price</strong> column. Adjusted close is used when present. Dates can be <code>2024-01-31</code> or <code>1/31/2024</code>. Open up to four files to compare them.</p>
+<label for="price-files">Choose CSV files</label><input id="price-files" type="file" accept=".csv,text/csv,text/plain" multiple>
+<p><button id="load-example" type="button">Try with fictional example data</button> <button id="clear-files" type="button">Clear all</button></p>
+<p id="file-status" role="status" aria-live="polite">No files open yet.</p>
+<ul id="series-list" class="filings"></ul>
+</section>
+
+<section aria-labelledby="chart-title"><h2 id="chart-title">Chart and indicators</h2>
+<div class="controls"><div><label for="chart-series">Series</label><select id="chart-series"></select></div>
+<div><label for="chart-range">Period</label><select id="chart-range"><option value="63">3 months</option><option value="126">6 months</option><option value="252" selected>1 year</option><option value="756">3 years</option><option value="0">All</option></select></div></div>
+<p><label class="check" for="show-sma20"><input id="show-sma20" type="checkbox" checked> 20-day average</label><label class="check" for="show-sma50"><input id="show-sma50" type="checkbox" checked> 50-day average</label></p>
+<figure class="chart-figure"><div id="price-chart" class="bar-chart" role="img" aria-label="Price chart"><p>Open a file or try the example to see a chart.</p></div><figcaption id="price-caption"></figcaption></figure>
+<div class="table-box"><table id="stats-table"><caption>Return and risk for each file</caption><thead><tr><th scope="col">Series</th><th scope="col">Period</th><th scope="col" class="num">Total return</th><th scope="col" class="num">Annual growth</th><th scope="col" class="num">Volatility</th><th scope="col" class="num">Worst drop</th><th scope="col" class="num">RSI(14)</th></tr></thead><tbody></tbody></table></div>
+<p class="meta">Annual growth needs at least a year of data. Volatility is the annualised standard deviation of daily returns. Worst drop is the largest fall from a previous high.</p>
+</section>
+
+<section aria-labelledby="compare-title"><h2 id="compare-title">Growth of $10,000</h2>
+<p>Each line starts at $10,000 on the first date that every open file shares.</p>
+<figure class="chart-figure"><div id="growth-chart" class="bar-chart" role="img" aria-label="Growth comparison chart"><p>Open two or more files to compare them.</p></div><figcaption id="growth-legend" class="legend"></figcaption></figure>
+</section>
+
+<section aria-labelledby="sim-title"><h2 id="sim-title">Hypothetical investment</h2>
+<form id="sim-form" class="controls" novalidate><div><label for="sim-series">Series</label><select id="sim-series"></select></div>
+<div><label for="sim-amount">Amount ($)</label><input id="sim-amount" type="number" min="1" step="any" value="1000" inputmode="decimal"></div>
+<div><label for="sim-start">Start date</label><input id="sim-start" type="date"></div>
+<div><label for="sim-mode">How</label><select id="sim-mode"><option value="lump">Once, on the start date</option><option value="monthly">Every month from the start date</option></select></div>
+<div><label for="sim-run" class="sr-label">Run</label><button id="sim-run" type="submit">Calculate</button></div></form>
+<p id="sim-status" role="status" aria-live="polite"></p><dl id="sim-results" class="stats"></dl>
+<p class="meta">Buys at that day's price in your file, with fractional shares, no fees, taxes or dividends unless they are reflected in an adjusted price. No trades are placed.</p>
+</section>
+
+<section aria-labelledby="rules-title"><h2 id="rules-title">Alert rules</h2>
+<p>Rules are checked against the latest row of each file whenever you open or refresh it. Rules are saved in this browser by series name, so they come back when you open an updated file with the same name.</p>
+<form id="rule-form" class="controls" novalidate><div><label for="rule-series">Series</label><select id="rule-series"></select></div>
+<div><label for="rule-type">Condition</label><select id="rule-type"></select></div>
+<div><label for="rule-value">Value</label><input id="rule-value" type="number" step="any" inputmode="decimal"></div>
+<div><label for="rule-add" class="sr-label">Add</label><button id="rule-add" type="submit">Add rule</button></div></form>
+<p id="rule-status" role="status" aria-live="polite"></p>
+<ul id="rule-list" class="filings"></ul>
+</section>
+<footer>Calculations run in your browser on data you provide. Research Desk does not supply, store or redistribute market prices.</footer>
+</main></body></html>

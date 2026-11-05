@@ -234,3 +234,13 @@ def test_refresh_skips_rewrite_when_only_build_time_changed(tmp_path):
     assert sec_refresh.unchanged(path,dict(SNAPSHOT,generated_at_utc='2027-01-01T00:00:00+00:00'))
     assert not sec_refresh.unchanged(path,dict(SNAPSHOT,source='changed'))
     assert not sec_refresh.unchanged(tmp_path/'absent.json',SNAPSHOT)
+
+
+def test_price_lab_page_is_opt_in_and_self_contained(client,monkeypatch):
+    monkeypatch.delenv('PUBLIC_SEC_RESEARCH',raising=False)
+    assert client.get('/price-lab.html').status_code==404
+    monkeypatch.setenv('PUBLIC_SEC_RESEARCH','1')
+    page=client.get('/price-lab.html')
+    assert page.status_code==200 and page.headers['x-research-data']=='visitor-supplied'
+    assert "connect-src 'self'" in page.headers['content-security-policy'] and 'SYNTHETIC DEMO' not in page.text
+    assert '/assets/price-lab-core.js' in page.text and 'never leaves this browser' in page.text

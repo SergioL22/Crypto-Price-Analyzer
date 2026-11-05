@@ -135,6 +135,8 @@ def create_app(sec_fetch=None):
             if request.url.path.startswith('/v1/sec/') and response.status_code==200:
                 fresh=request.url.path in ('/v1/sec/company','/v1/sec/filings')
                 response.headers['Cache-Control']='public, max-age=300' if fresh else 'public, max-age=3600'
+        if os.environ.get('PUBLIC_SEC_RESEARCH')=='1' and request.url.path=='/price-lab.html':
+            response.headers['X-Research-Data']='visitor-supplied'
         if origin.startswith('https:'):response.headers['Strict-Transport-Security']='max-age=31536000'
         return response
 
@@ -224,12 +226,12 @@ def create_app(sec_fetch=None):
 
     @app.get('/{page:path}')
     def page(page:str):
-        if os.environ.get('PUBLIC_SEC_RESEARCH')=='1' and page=='filings-research.html':
-            return HTMLResponse((ROOT/'filings-research.html').read_text(encoding='utf-8'))
+        if os.environ.get('PUBLIC_SEC_RESEARCH')=='1' and page in ('filings-research.html','price-lab.html'):
+            return HTMLResponse((ROOT/page).read_text(encoding='utf-8'))
         if os.environ.get('PUBLIC_MARKET_WIDGETS')=='1' and page in ('market-charts.html','market-watchlist.html'):
             content=(ROOT/'public-market.html').read_text(encoding='utf-8')
             if os.environ.get('PUBLIC_SEC_RESEARCH')=='1':
-                content=content.replace('<a href="/market-watchlist.html">Market watchlist</a>','<a href="/market-watchlist.html">Market watchlist</a><a href="/filings-research.html">Filings research</a>',1)
+                content=content.replace('<a href="/market-watchlist.html">Market watchlist</a>','<a href="/market-watchlist.html">Market watchlist</a><a href="/filings-research.html">Filings research</a><a href="/price-lab.html">Your price data</a>',1)
             return HTMLResponse(content)
         name=PAGES.get('/'+page)
         if not name:return JSONResponse(status_code=404,content={'error':{'code':'not_found','message':'Not part of the synthetic demo.'}})
