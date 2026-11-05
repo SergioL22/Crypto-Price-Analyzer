@@ -227,3 +227,10 @@ def test_without_user_agent_filings_come_from_snapshot(client,monkeypatch):
     monkeypatch.setenv('PUBLIC_SEC_RESEARCH','1')
     company=client.get('/v1/sec/filings?symbols=EXM').json()['companies'][0]
     assert company['filings_source']=='snapshot' and company['filings_fetched_at_utc']==SNAPSHOT['generated_at_utc']
+
+
+def test_refresh_skips_rewrite_when_only_build_time_changed(tmp_path):
+    path=tmp_path/'snapshot.json';path.write_text(json.dumps(SNAPSHOT),encoding='utf-8')
+    assert sec_refresh.unchanged(path,dict(SNAPSHOT,generated_at_utc='2027-01-01T00:00:00+00:00'))
+    assert not sec_refresh.unchanged(path,dict(SNAPSHOT,source='changed'))
+    assert not sec_refresh.unchanged(tmp_path/'absent.json',SNAPSHOT)

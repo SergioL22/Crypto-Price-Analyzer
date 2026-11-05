@@ -30,6 +30,8 @@ $env:SEC_USER_AGENT = 'ResearchDesk/1.0 (your-email@example.com)'
 
 Then run the tests, commit the updated snapshot and redeploy. N-PORT holdings are published about 60 days after each fiscal quarter, so a monthly refresh is enough.
 
+**Automatic refresh:** `.github/workflows/sec-refresh.yml` runs this on the 3rd of each month (and on demand from the Actions tab). It validates the result with the SEC tests and commits the snapshot only when the SEC data actually changed. A rebuild that differs only in its build time is not rewritten. Add a repository secret named `SEC_USER_AGENT` (Settings → Secrets and variables → Actions) before the first run.
+
 Notes:
 - **XOM**: Exxon Mobil's listing now files as ExxonMobil Holdings Corp. The refresh merges the predecessor registrant's (CIK 34088) annual values and filings, and the page says so.
 - **Multi-series trusts** (iShares Trust for IWM, Vanguard Index Funds for VTI) are looked up by fund series ID. The refresh fails if the filing does not cover that series.
