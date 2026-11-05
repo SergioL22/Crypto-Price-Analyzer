@@ -1,11 +1,20 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Filings Research · Research Desk</title>
-<link rel="stylesheet" href="/assets/public-market.css"><link rel="stylesheet" href="/assets/filings-research.css"><script defer src="/assets/filings-research.js"></script></head>
+<link rel="stylesheet" href="/assets/public-market.css"><link rel="stylesheet" href="/assets/filings-research.css"><script defer src="/assets/filings-research.js"></script><script defer src="/assets/filing-alerts.js"></script></head>
 <body><a href="#main" class="skip">Skip to content</a><main id="main">
 <header><p class="eyebrow">PUBLIC FILINGS RESEARCH</p><h1>Filings research</h1><p>Ten years of reported fundamentals, the latest filings, and what is actually inside popular ETFs. Built from public SEC EDGAR data.</p></header>
 <nav aria-label="Workspace"><a href="/">Original chart · practice</a><a href="/market-charts.html">TradingView chart</a><a href="/market-watchlist.html">Market watchlist</a><a href="/filings-research.html">Filings research</a></nav>
 <aside class="notice"><span id="sec-notice">Company fundamentals, filings and ETF holdings come from public SEC EDGAR filings. No stock prices are used. Research only, not advice.</span> <span id="sec-updated"></span></aside>
+
+<section id="filing-alerts" aria-labelledby="alerts-title"><h2 id="alerts-title">Filing alerts</h2>
+<p>Follow companies to see their new SEC filings here, with a NEW badge on anything filed since you last marked them seen. The check runs when you open this page or press Check now. Nothing runs in the background, and your choices stay in this browser.</p>
+<fieldset><legend>Companies to follow</legend><div id="alert-follow" class="checks"></div><button id="alert-watchlist" type="button" hidden>Follow companies from your market watchlist</button></fieldset>
+<fieldset><legend>Filing types</legend><div id="alert-types" class="checks"></div></fieldset>
+<p><button id="alert-refresh" type="button">Check now</button> <button id="alert-seen" type="button" disabled>Mark all as seen</button></p>
+<p id="alert-status" role="status" aria-live="polite"></p><p id="alert-count" class="meta"></p>
+<ul id="alert-list" class="filings"></ul>
+</section>
 
 <section aria-labelledby="company-title"><h2 id="company-title">Company fundamentals</h2>
 <div class="controls"><div><label for="company">Company</label><select id="company"></select></div>

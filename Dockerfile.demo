@@ -3,7 +3,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY requirements-backend.txt ./
 RUN pip install --no-cache-dir -r requirements-backend.txt && useradd --create-home --uid 10001 appuser
-COPY public_demo.py hosted_preview.py stock_service.py stock_provider.py stock_cache.py stock_validation.py stock_models.py assets.py analysis.py api.py data.py history_window.py backend_models.py profile_models.py company_profiles.py price_validation.py sec_edgar.py ./
+COPY public_demo.py hosted_preview.py stock_service.py stock_provider.py stock_cache.py stock_validation.py stock_models.py assets.py analysis.py api.py data.py history_window.py backend_models.py profile_models.py company_profiles.py price_validation.py sec_edgar.py sec_live.py ./
 COPY sec_data/research_snapshot.json ./sec_data/
 COPY static/ ./static/
 USER appuser

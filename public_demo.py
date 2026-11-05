@@ -21,6 +21,7 @@ from stock_models import AssetCatalog,StockResearch
 from profile_models import CompanyProfileResponse
 from hosted_preview import RequestBudget,PAGES,ROOT
 import sec_edgar
+import sec_live
 from sec_edgar import SNAPSHOT as SEC_SNAPSHOT
 
 SEC_NOTICE=('Company fundamentals, filings and ETF holdings come from public SEC EDGAR filings. '
@@ -93,8 +94,11 @@ def origin_settings():
     return origin
 
 
-def create_app():
+def create_app(sec_fetch=None):
     origin=origin_settings();authority=urlsplit(origin).netloc
+    # Fresh filing lists need an identifying SEC User-Agent; without one, filings come from the snapshot.
+    if sec_fetch is None and os.environ.get('SEC_USER_AGENT'):sec_fetch=sec_live.requests_fetch(os.environ['SEC_USER_AGENT'])
+    live_filings=sec_live.LiveFilings(sec_fetch) if sec_fetch else None
     # This factory has no provider injection, live flag, key lookup or live fallback.
     stocks=StockService(provider=SyntheticProvider(),profiles=SyntheticProfiles(),history_request_limit=12)
     budget=RequestBudget(limit=120);gate=BoundedSemaphore(2)
@@ -128,7 +132,9 @@ def create_app():
             response.headers['Content-Security-Policy']="default-src 'none'; script-src 'self' https://s3.tradingview.com; style-src 'self'; frame-src https://www.tradingview.com https://s.tradingview.com https://tradingview-widget.com https://*.tradingview-widget.com; img-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
         if os.environ.get('PUBLIC_SEC_RESEARCH')=='1' and (request.url.path=='/filings-research.html' or request.url.path.startswith('/v1/sec/')):
             response.headers['X-Research-Data']='sec-public'
-            if request.url.path.startswith('/v1/sec/') and response.status_code==200:response.headers['Cache-Control']='public, max-age=3600'
+            if request.url.path.startswith('/v1/sec/') and response.status_code==200:
+                fresh=request.url.path in ('/v1/sec/company','/v1/sec/filings')
+                response.headers['Cache-Control']='public, max-age=300' if fresh else 'public, max-age=3600'
         if origin.startswith('https:'):response.headers['Strict-Transport-Security']='max-age=31536000'
         return response
 
@@ -182,9 +188,26 @@ def create_app():
                     companies=[dict(symbol=c['symbol'],name=c['name']) for c in data['companies'].values()],
                     funds=[dict(symbol=f['symbol'],name=f['name'],period_end=f['period_end']) for f in data['funds'].values()])
 
+    def company_filings(data,company):
+        live=live_filings.filings(company['cik']) if live_filings else None
+        if live is None:
+            return dict(filings=company['filings'],filings_source='snapshot',filings_fetched_at_utc=data['generated_at_utc'])
+        rows,fetched=live
+        return dict(filings=sec_live.merge_filings(rows,company['filings']),filings_source='live',
+                    filings_fetched_at_utc=datetime.fromtimestamp(fetched,timezone.utc).replace(microsecond=0).isoformat())
+
     @app.get('/v1/sec/company')
     def sec_company(symbol:str=Query(pattern=r'^[A-Z]{1,5}$')):
-        data=sec_data();return dict(sec_symbol(data['companies'],symbol,'company'),generated_at_utc=data['generated_at_utc'])
+        data=sec_data();company=sec_symbol(data['companies'],symbol,'company')
+        return dict(company,**company_filings(data,company),generated_at_utc=data['generated_at_utc'])
+
+    @app.get('/v1/sec/filings')
+    def sec_filings(symbols:str=Query(pattern=r'^[A-Z]{1,5}(,[A-Z]{1,5}){0,19}$')):
+        data=sec_data();out=[]
+        for symbol in dict.fromkeys(symbols.split(',')):
+            company=data['companies'].get(symbol)
+            if company:out.append(dict(symbol=symbol,name=company['name'],**company_filings(data,company)))
+        return dict(companies=out,uncovered=[s for s in symbols.split(',') if s not in data['companies']])
 
     @app.get('/v1/sec/fund')
     def sec_fund(symbol:str=Query(pattern=r'^[A-Z]{1,5}$')):
