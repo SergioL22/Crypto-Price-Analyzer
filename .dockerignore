@@ -7,3 +7,5 @@
 !*.py
 !static/
 !static/**
+!sec_data/
+!sec_data/research_snapshot.json
