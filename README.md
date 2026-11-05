@@ -304,6 +304,7 @@ The stock/ETF workspace now includes interactive history navigation, optional ge
 - [UI polish](UI_POLISH.md)
 - [Fresh-data issuance attempt](PROSPECTIVE_START.md)
 - [Hosted app and licensing plan](APP_RELEASE_PLAN.md)
+- [Public filings research from SEC EDGAR](SEC_RESEARCH.md)
 
 The hosted app is planned, not deployed. Current operation remains a single-user loopback-only local application. Earlier phase-specific sections describe the capabilities at those milestones.
 

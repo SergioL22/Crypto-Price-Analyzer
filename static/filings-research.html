@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Filings Research · Research Desk</title>
+<link rel="stylesheet" href="/assets/public-market.css"><link rel="stylesheet" href="/assets/filings-research.css"><script defer src="/assets/filings-research.js"></script></head>
+<body><a href="#main" class="skip">Skip to content</a><main id="main">
+<header><p class="eyebrow">PUBLIC FILINGS RESEARCH</p><h1>Filings research</h1><p>Ten years of reported fundamentals, the latest filings, and what is actually inside popular ETFs. Built from public SEC EDGAR data.</p></header>
+<nav aria-label="Workspace"><a href="/">Original chart · practice</a><a href="/market-charts.html">TradingView chart</a><a href="/market-watchlist.html">Market watchlist</a><a href="/filings-research.html">Filings research</a></nav>
+<aside class="notice"><span id="sec-notice">Company fundamentals, filings and ETF holdings come from public SEC EDGAR filings. No stock prices are used. Research only, not advice.</span> <span id="sec-updated"></span></aside>
+
+<section aria-labelledby="company-title"><h2 id="company-title">Company fundamentals</h2>
+<div class="controls"><div><label for="company">Company</label><select id="company"></select></div>
+<div><label for="metric">Measure</label><select id="metric"></select></div></div>
+<p id="company-status" role="status" aria-live="polite">Loading company data…</p>
+<p id="company-meta" class="meta"></p>
+<figure class="chart-figure"><div id="metric-chart" class="bar-chart" role="img" aria-label="Annual values chart"></div><figcaption id="metric-caption"></figcaption></figure>
+<div class="table-box"><table id="metric-table"><caption>Annual values as reported</caption><thead><tr><th scope="col">Fiscal year ending</th><th scope="col">Value</th><th scope="col">Change</th><th scope="col">Source</th></tr></thead><tbody></tbody></table></div>
+<h3>Recent filings</h3>
+<p class="meta">10-K annual report · 10-Q quarterly report · 8-K material event · Form 4 insider transaction · DEF 14A proxy statement.</p>
+<ul id="filings" class="filings"></ul>
+</section>
+
+<section aria-labelledby="fund-title"><h2 id="fund-title">What's inside an ETF</h2>
+<div class="controls"><div><label for="fund">ETF</label><select id="fund"></select></div></div>
+<p id="fund-status" role="status" aria-live="polite">Loading fund holdings…</p>
+<dl id="fund-stats" class="stats"></dl>
+<div class="table-box"><table id="fund-table"><caption>Largest holdings by portfolio weight</caption><thead><tr><th scope="col">#</th><th scope="col">Holding</th><th scope="col">Weight</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<section aria-labelledby="overlap-title"><h2 id="overlap-title">Compare two ETFs</h2>
+<p>How much of one fund you already own through another. Overlap by weight adds up, for every security both funds hold, the smaller of its two portfolio weights.</p>
+<div class="controls"><div><label for="fund-a">First ETF</label><select id="fund-a"></select></div><div><label for="fund-b">Second ETF</label><select id="fund-b"></select></div></div>
+<p id="overlap-status" role="status" aria-live="polite">Choose two ETFs.</p>
+<dl id="overlap-stats" class="stats"></dl>
+<div class="table-box"><table id="overlap-table"><caption>Largest shared holdings</caption><thead><tr><th scope="col">Holding</th><th scope="col" id="overlap-a-head">Weight in first</th><th scope="col" id="overlap-b-head">Weight in second</th><th scope="col">Overlap</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<details><summary>How this data works</summary><dl>
+<dt>Where it comes from</dt><dd>Fundamentals use XBRL data that companies file with the SEC, using the SEC's calendar-year frames to avoid double counting. Holdings come from each fund's latest public Form N-PORT report, which the SEC publishes about 60 days after each fiscal quarter.</dd>
+<dt>Calculated measures</dt><dd>Free cash flow is operating cash flow minus capital expenditure. Margins divide operating or net income by revenue. Banks and some other companies do not report every measure, so some charts are empty.</dd>
+<dt>What is left out</dt><dd>Short-term cash vehicles, such as reinvested securities-lending collateral, are excluded from ETF holdings and overlap. Their share is shown separately.</dd>
+<dt>Freshness</dt><dd>The data is a periodic snapshot, not live. Check the linked SEC filing for the exact reported figure.</dd></dl></details>
+<footer>Source: U.S. Securities and Exchange Commission, <a href="https://www.sec.gov/search-filings" target="_blank" rel="noopener noreferrer">EDGAR</a>. SEC content is public information. Research Desk is not affiliated with the SEC. Research only, not investment advice.</footer>
+</main></body></html>
