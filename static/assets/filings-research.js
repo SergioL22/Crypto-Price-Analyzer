@@ -65,11 +65,35 @@
   });
  }
 
+ function resetInsiders(){$('insider-stats').replaceChildren();$('insider-status').textContent='';$('insider-people-box').hidden=true;$('insider-recent-box').hidden=true;$('insider-load').disabled=false;}
+ async function loadInsiders(){
+  const symbol=$('company').value,status=$('insider-status');$('insider-load').disabled=true;
+  status.textContent=`Reading ${symbol}'s Form 4 filings at the SEC… The first load can take up to 20 seconds.`;
+  try{
+   const d=await api(`/v1/sec/insiders?symbol=${encodeURIComponent(symbol)}`);
+   if($('company').value!==symbol)return;
+   status.textContent=`${d.forms} Form 4 filings since ${d.since}${d.truncated?' (latest 40 read)':''} · checked ${d.fetched_at_utc.slice(0,16).replace('T',' ')} UTC.`;
+   const stats=$('insider-stats');stats.replaceChildren();
+   stat(stats,'Open-market buys',`${d.buys.count} · ${money(d.buys.value)}`);
+   stat(stats,'Open-market sales',`${d.sales.count} · ${money(d.sales.value)}`);
+   stat(stats,'Sales under a 10b5-1 plan',d.sales.count?`${d.sales.planned} of ${d.sales.count}`:'—');
+   stat(stats,'Other transactions',String(d.other_transactions));
+   const people=$('insider-people').tBodies[0];people.replaceChildren();
+   d.insiders.forEach(p=>{const tr=el('tr');tr.append(el('td',{},p.insider),el('td',{},p.roles.join(', ')||'—'),el('td',{class:'num'},p.bought?money(p.bought):'—'),el('td',{class:'num'},p.sold?money(p.sold):'—'));people.append(tr);});
+   $('insider-people-box').hidden=!d.insiders.length;
+   const recent=$('insider-recent').tBodies[0];recent.replaceChildren();
+   d.recent.forEach(r=>{const tr=el('tr'),link=el('td');link.append(el('a',{href:r.url,target:'_blank',rel:'noopener noreferrer'},r.filed));
+    tr.append(el('td',{},r.date),el('td',{},r.insider),el('td',{},`${r.label}${r.planned&&r.code==='S'?' (10b5-1 plan)':''}`),el('td',{class:'num'},Math.round(r.shares).toLocaleString('en-US')),
+     el('td',{class:'num'},r.price?`$${r.price.toFixed(2)}`:'—'),link);recent.append(tr);});
+   $('insider-recent-box').hidden=!d.recent.length;
+   if(!d.recent.length)status.textContent+=' No insider transactions in this period.';
+  }catch(error){status.textContent=error.message;$('insider-load').disabled=false;}
+ }
  async function loadCompany(){
   const symbol=$('company').value;$('company-status').textContent=`Loading ${symbol}…`;
   try{
    const company=companies.get(symbol)||await api(`/v1/sec/company?symbol=${encodeURIComponent(symbol)}`);companies.set(symbol,company);
-   $('company-status').textContent='';
+   $('company-status').textContent='';resetInsiders();
    const meta=$('company-meta');meta.replaceChildren();
    meta.append(`${company.registrant||company.name} · CIK ${company.cik}${company.sic_description?` · ${company.sic_description}`:''} · `);
    meta.append(el('a',{href:company.source_url,target:'_blank',rel:'noopener noreferrer'},'All filings on EDGAR'));
@@ -140,6 +164,17 @@
    const sample=await api(`/v1/sec/company?symbol=${encodeURIComponent(coverage.companies[0].symbol)}`);companies.set(sample.symbol,sample);
    METRICS.filter(k=>sample.metrics[k]).forEach(k=>option($('metric'),k,sample.metrics[k].label));
    $('fund-a').value=FUND_DEFAULTS[0];$('fund-b').value=FUND_DEFAULTS[1];
+   $('lookup-form').onsubmit=async e=>{
+    e.preventDefault();const symbol=$('lookup-symbol').value.trim().toUpperCase();
+    if(!/^[A-Z]{1,5}([.-][A-Z]{1,2})?$/.test(symbol)){$('company-status').textContent='Enter a US ticker such as TSLA or BRK.B.';return;}
+    $('company-status').textContent=`Looking up ${symbol} at the SEC… This can take a few seconds the first time.`;
+    try{
+     const company=await api(`/v1/sec/lookup?symbol=${encodeURIComponent(symbol)}`);companies.set(company.symbol,company);
+     if(![...$('company').options].some(o=>o.value===company.symbol))option($('company'),company.symbol,`${company.name} · ${company.symbol}`);
+     $('company').value=company.symbol;$('lookup-symbol').value='';await loadCompany();
+    }catch(error){$('company-status').textContent=error.message;}
+   };
+   $('insider-load').onclick=loadInsiders;
    $('company').onchange=loadCompany;$('metric').onchange=renderMetric;$('fund').onchange=loadFund;$('fund-a').onchange=loadOverlap;$('fund-b').onchange=loadOverlap;
    await Promise.all([loadCompany(),loadFund(),loadOverlap()]);
   }catch(error){$('company-status').textContent=error.message;$('fund-status').textContent='';$('overlap-status').textContent='';}

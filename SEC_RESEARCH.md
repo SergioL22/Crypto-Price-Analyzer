@@ -30,6 +30,8 @@ $env:SEC_USER_AGENT = 'ResearchDesk/1.0 (your-email@example.com)'
 
 Then run the tests, commit the updated snapshot and redeploy. N-PORT holdings are published about 60 days after each fiscal quarter, so a monthly refresh is enough.
 
+**Automatic refresh:** `.github/workflows/sec-refresh.yml` runs this on the 3rd of each month (and on demand from the Actions tab). It validates the result with the SEC tests and commits the snapshot only when the SEC data actually changed. A rebuild that differs only in its build time is not rewritten. Add a repository secret named `SEC_USER_AGENT` (Settings → Secrets and variables → Actions) before the first run.
+
 Notes:
 - **XOM**: Exxon Mobil's listing now files as ExxonMobil Holdings Corp. The refresh merges the predecessor registrant's (CIK 34088) annual values and filings, and the page says so.
 - **Multi-series trusts** (iShares Trust for IWM, Vanguard Index Funds for VTI) are looked up by fund series ID. The refresh fails if the filing does not cover that series.
@@ -44,3 +46,20 @@ The top of the page lets visitors follow any of the covered companies and choose
 
 - **Live filings** are on only when `SEC_USER_AGENT` is set (app name and contact email). The server then fetches each company's `submissions` feed at most once every 30 minutes and backs off for 5 minutes after a failure, so visitor traffic never reaches EDGAR. On Render, set it under the service's Environment settings. `render-demo.yaml` lists it with `sync: false`, so it is never stored in the repo.
 - **Without it**, or when EDGAR is unreachable, filings come from the committed snapshot, and the page says which source and time it is showing. Live rows are merged with the snapshot's, which keeps XOM's predecessor filings.
+
+## Your price data (`/price-lab.html`)
+
+Price tools that run on a CSV the visitor opens, such as a broker or spreadsheet export. The file is read in the browser with `File.text()`; nothing is uploaded, and the data is gone when the tab closes. Research Desk supplies no prices, so no market-data license is involved. Served when `PUBLIC_SEC_RESEARCH=1`, with `X-Research-Data: visitor-supplied` and the same `connect-src 'self'` policy.
+
+- **Input:** a header row with a Date column and an Adj Close, Close or Price column (adjusted close preferred). Dates as `2024-01-31` or `1/31/2024`. Up to four files of 5 MB and 20,000 rows each. Duplicate dates are rejected; unreadable rows are skipped and counted.
+- **Tools:** price chart with 20- and 50-day averages; total return, annual growth (only with a year or more), annualised volatility, worst drop and RSI(14); growth of $10,000 on the dates all files share; a hypothetical lump-sum or monthly investment; and alert rules (close or RSI above/below) checked against the latest row. Rules are saved in the browser by series name (`research-desk.price-lab.rules.v1`).
+- **Example data:** two clearly labelled fictional series, generated in the browser.
+- Calculations live in `static/assets/price-lab-core.js` and are tested in `tests/price-lab.test.cjs` (run in CI's Dashboard job).
+
+## Any US company and insider activity
+
+Both need live SEC access (`SEC_USER_AGENT`); without it the page says they are unavailable.
+
+- **Look up any ticker** (`/v1/sec/lookup?symbol=TSLA`, also `BRK.B`): resolves the ticker with the SEC's `company_tickers.json` (cached for a day), then builds fundamentals and filings from `companyfacts` and `submissions`. Results are cached for 12 hours (up to 60 companies), and at most 30 new lookups are fetched per 10 minutes. Starter companies are served from the snapshot.
+- **Insider activity** (`/v1/sec/insiders?symbol=`): reads up to 40 Form 4 filings from the past 12 months and summarises open-market purchases (code P) and sales (S), how many sales were under a Rule 10b5-1 plan, the most active insiders and the latest transactions. Grants, option exercises and tax withholding are counted separately as routine. Cached for 12 hours. Loaded only when the visitor presses **Load insider activity**, since the first load reads many filings.
+- All live requests share one client that waits 0.15 s between calls.

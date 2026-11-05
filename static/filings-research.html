@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="/assets/public-market.css"><link rel="stylesheet" href="/assets/filings-research.css"><script defer src="/assets/filings-research.js"></script><script defer src="/assets/filing-alerts.js"></script></head>
 <body><a href="#main" class="skip">Skip to content</a><main id="main">
 <header><p class="eyebrow">PUBLIC FILINGS RESEARCH</p><h1>Filings research</h1><p>Ten years of reported fundamentals, the latest filings, and what is actually inside popular ETFs. Built from public SEC EDGAR data.</p></header>
-<nav aria-label="Workspace"><a href="/">Original chart · practice</a><a href="/market-charts.html">TradingView chart</a><a href="/market-watchlist.html">Market watchlist</a><a href="/filings-research.html">Filings research</a></nav>
+<nav aria-label="Workspace"><a href="/">Original chart · practice</a><a href="/market-charts.html">TradingView chart</a><a href="/market-watchlist.html">Market watchlist</a><a href="/filings-research.html">Filings research</a><a href="/price-lab.html">Your price data</a></nav>
 <aside class="notice"><span id="sec-notice">Company fundamentals, filings and ETF holdings come from public SEC EDGAR filings. No stock prices are used. Research only, not advice.</span> <span id="sec-updated"></span></aside>
 
 <section id="filing-alerts" aria-labelledby="alerts-title"><h2 id="alerts-title">Filing alerts</h2>
@@ -19,6 +19,7 @@
 <section aria-labelledby="company-title"><h2 id="company-title">Company fundamentals</h2>
 <div class="controls"><div><label for="company">Company</label><select id="company"></select></div>
 <div><label for="metric">Measure</label><select id="metric"></select></div></div>
+<form id="lookup-form" class="controls" novalidate><div><label for="lookup-symbol">Or look up any US-listed company</label><input id="lookup-symbol" type="text" placeholder="Ticker, such as TSLA or BRK.B" maxlength="8" autocomplete="off" autocapitalize="characters"></div><div><label for="lookup-go" class="sr-label">Look up</label><button id="lookup-go" type="submit">Look up</button></div></form>
 <p id="company-status" role="status" aria-live="polite">Loading company data…</p>
 <p id="company-meta" class="meta"></p>
 <figure class="chart-figure"><div id="metric-chart" class="bar-chart" role="img" aria-label="Annual values chart"></div><figcaption id="metric-caption"></figcaption></figure>
@@ -26,6 +27,13 @@
 <h3>Recent filings</h3>
 <p class="meta">10-K annual report · 10-Q quarterly report · 8-K material event · Form 4 insider transaction · DEF 14A proxy statement.</p>
 <ul id="filings" class="filings"></ul>
+<h3>Insider activity, past 12 months</h3>
+<p class="meta">From Form 4 filings by officers, directors and 10% owners. Open-market purchases and sales are shown separately from grants, option exercises and tax withholding, which are routine. Sales under a pre-arranged Rule 10b5-1 plan are counted as planned.</p>
+<p><button id="insider-load" type="button">Load insider activity</button></p>
+<p id="insider-status" role="status" aria-live="polite"></p>
+<dl id="insider-stats" class="stats"></dl>
+<div class="table-box" id="insider-people-box" hidden><table id="insider-people"><caption>Largest open-market activity by insider</caption><thead><tr><th scope="col">Insider</th><th scope="col">Role</th><th scope="col" class="num">Bought</th><th scope="col" class="num">Sold</th></tr></thead><tbody></tbody></table></div>
+<div class="table-box" id="insider-recent-box" hidden><table id="insider-recent"><caption>Most recent transactions</caption><thead><tr><th scope="col">Date</th><th scope="col">Insider</th><th scope="col">Type</th><th scope="col" class="num">Shares</th><th scope="col" class="num">Reported price</th><th scope="col">Filing</th></tr></thead><tbody></tbody></table></div>
 </section>
 
 <section aria-labelledby="fund-title"><h2 id="fund-title">What's inside an ETF</h2>

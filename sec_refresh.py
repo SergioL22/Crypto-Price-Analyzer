@@ -94,6 +94,14 @@ def build(sec):
                 companies=companies,funds=funds)
 
 
+def unchanged(path,snapshot):
+    """True when only the build time differs, so scheduled refreshes don't commit no-op changes."""
+    try:previous=json.loads(path.read_text(encoding='utf-8'))
+    except (OSError,ValueError):return False
+    strip=lambda data:{k:v for k,v in data.items() if k!='generated_at_utc'}
+    return strip(previous)==strip(json.loads(json.dumps(snapshot)))
+
+
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--output',type=Path,default=SNAPSHOT)
@@ -101,6 +109,8 @@ def main(argv=None):
     args=parser.parse_args(argv)
     if not args.user_agent:parser.error('Set SEC_USER_AGENT (app name and contact) or pass --user-agent.')
     snapshot=build(Sec(args.user_agent))
+    if unchanged(args.output,snapshot):
+        print(f'{args.output} already matches EDGAR; left as is.',file=sys.stderr);return
     args.output.parent.mkdir(parents=True,exist_ok=True)
     temporary=args.output.with_suffix('.tmp')
     temporary.write_text(json.dumps(snapshot,separators=(',',':'),ensure_ascii=False),encoding='utf-8')
