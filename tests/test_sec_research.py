@@ -244,3 +244,101 @@ def test_price_lab_page_is_opt_in_and_self_contained(client,monkeypatch):
     assert page.status_code==200 and page.headers['x-research-data']=='visitor-supplied'
     assert "connect-src 'self'" in page.headers['content-security-policy'] and 'SYNTHETIC DEMO' not in page.text
     assert '/assets/price-lab-core.js' in page.text and 'never leaves this browser' in page.text
+
+
+TICKERS={'0':{'cik_str':555,'ticker':'NEWC','title':'New Co'},'1':{'cik_str':556,'ticker':'BRK-B','title':'Berkshire'}}
+
+
+def fake_sec(calls):
+    def get(url):
+        calls.append(url)
+        if url.endswith('company_tickers.json'):return TICKERS
+        if 'companyfacts' in url:return dict(FACTS,cik=555,entityName='NEW CO INC')
+        return dict(SUBMISSIONS,cik='555',name='NEW CO INC')
+    return get
+
+
+def test_company_lookup_caches_and_limits_new_lookups():
+    clock=Clock();calls=[]
+    lookup=sec_live.CompanyLookup(fake_sec(calls),window=60,window_limit=2,clock=clock)
+    record=lookup.company('newc')
+    assert record['name']=='New Co' and record['cik']==555 and record['metrics']['revenue']['values'][-1]['value']==120
+    assert len(calls)==3;lookup.company('NEWC');assert len(calls)==3   # cached
+    assert lookup.company('BRK.B')['symbol']=='BRK-B'
+    with pytest.raises(sec_live.LookupError_) as error:lookup.company('ZZZZ')
+    assert error.value.status==429                                    # window budget used up
+    clock.now+=61
+    with pytest.raises(sec_live.LookupError_) as error:lookup.company('ZZZZ')
+    assert error.value.status==404
+    with pytest.raises(sec_live.LookupError_) as error:lookup.company('NOT-VALID1')
+    assert error.value.status==422
+
+
+def test_lookup_endpoint(monkeypatch,tmp_path):
+    path=tmp_path/'snapshot.json';path.write_text(json.dumps(SNAPSHOT),encoding='utf-8')
+    monkeypatch.setattr(public_demo,'SEC_SNAPSHOT',path);monkeypatch.setattr(public_demo,'_sec_cache',{})
+    monkeypatch.setenv('PUBLIC_DEMO_ORIGIN','https://testserver');monkeypatch.setenv('PUBLIC_SEC_RESEARCH','1')
+    calls=[];app=public_demo.create_app(sec_fetch=lambda cik:LIVE_SUBMISSIONS,sec_lookup=sec_live.CompanyLookup(fake_sec(calls)))
+    client=TestClient(app,base_url='https://testserver')
+    found=client.get('/v1/sec/lookup?symbol=newc')
+    assert found.status_code==200 and found.json()['symbol']=='NEWC' and found.json()['filings_source']=='live'
+    assert 'fetched_at_epoch' not in found.json() and found.headers['cache-control']=='public, max-age=300'
+    assert client.get('/v1/sec/lookup?symbol=EXM').json()['registrant']=='Example Corp'   # covered list served from snapshot
+    assert client.get('/v1/sec/lookup?symbol=QQQQ').status_code==404
+    assert client.get('/v1/sec/lookup?symbol=a;b').status_code==422
+    offline=TestClient(public_demo.create_app(),base_url='https://testserver')
+    assert offline.get('/v1/sec/lookup?symbol=NEWC').json()['error']['code']=='lookup_unavailable'
+
+
+def form4(code,shares,price,date='2026-10-27',planned=True,title='SVP',director=False):
+    return (f'<ownershipDocument><reportingOwner><reportingOwnerId><rptOwnerName>Pat Insider</rptOwnerName></reportingOwnerId>'
+            f'<reportingOwnerRelationship><isDirector>{str(director).lower()}</isDirector><isOfficer>true</isOfficer><officerTitle>{title}</officerTitle></reportingOwnerRelationship></reportingOwner>'
+            f'<aff10b5One>{str(planned).lower()}</aff10b5One><nonDerivativeTable><nonDerivativeTransaction><transactionDate><value>{date}</value></transactionDate>'
+            f'<transactionCoding><transactionCode>{code}</transactionCode></transactionCoding><transactionAmounts><transactionShares><value>{shares}</value></transactionShares>'
+            + (f'<transactionPricePerShare><value>{price}</value></transactionPricePerShare>' if price is not None else '')
+            + '<transactionAcquiredDisposedCode><value>D</value></transactionAcquiredDisposedCode></transactionAmounts></nonDerivativeTransaction></nonDerivativeTable></ownershipDocument>')
+
+
+def test_parse_form4_and_summary_separate_open_market_trades():
+    sale=sec_edgar.parse_form4(form4('S',100,50.0))
+    assert sale['owners']==[dict(name='Pat Insider',roles=['SVP'])]
+    assert sale['transactions'][0]==dict(date='2026-10-27',code='S',label='Open-market sale',shares=100.0,price=50.0,value=5000.0,direction='D',planned=True)
+    grant=sec_edgar.parse_form4(form4('A',10,None,planned=False))
+    buy=sec_edgar.parse_form4(form4('P',20,10.0,planned=False,director=True))
+    old=sec_edgar.parse_form4(form4('P',1,1.0,date='2024-01-01'))
+    summary=sec_edgar.insider_summary([sale,grant,buy,old],since='2025-11-05')
+    assert summary['buys']==dict(count=1,shares=20.0,value=200.0)
+    assert summary['sales']==dict(count=1,shares=100.0,value=5000.0,planned=1)
+    assert summary['other_transactions']==1 and len(summary['recent'])==3
+    assert summary['insiders'][0]['sold']==5000.0 and summary['insiders'][0]['bought']==200.0
+
+
+def test_insider_activity_reads_recent_form4s_once():
+    calls=[]
+    subs={'filings':{'recent':{'form':['4','10-Q','4','4'],'accessionNumber':['0001-26-000001','0001-26-000002','0001-26-000003','0001-25-000004'],
+          'filingDate':['2026-10-29','2026-10-01','2026-09-01','2025-01-01'],'primaryDocument':['xslF345X06/form4.xml','q.htm','xslF345X06/f.xml','xslF345X06/old.xml']}}}
+    def text(url):
+        calls.append(url)
+        if url.endswith('f.xml'):return '<not-xml'
+        return form4('S',100,50.0)
+    insiders=sec_live.InsiderActivity(lambda url:subs,text,clock=Clock(),today=lambda:'2026-11-05')
+    summary=insiders.activity(123)
+    assert calls==['https://www.sec.gov/Archives/edgar/data/123/000126000001/form4.xml','https://www.sec.gov/Archives/edgar/data/123/000126000003/f.xml']
+    assert summary['forms']==1 and summary['sales']['count']==1 and summary['since']=='2025-11-05'
+    assert summary['recent'][0]['url'].endswith('/xslF345X06/form4.xml')
+    insiders.activity(123);assert len(calls)==2
+
+
+def test_insiders_endpoint(monkeypatch,tmp_path):
+    path=tmp_path/'snapshot.json';path.write_text(json.dumps(SNAPSHOT),encoding='utf-8')
+    monkeypatch.setattr(public_demo,'SEC_SNAPSHOT',path);monkeypatch.setattr(public_demo,'_sec_cache',{})
+    monkeypatch.setenv('PUBLIC_DEMO_ORIGIN','https://testserver');monkeypatch.setenv('PUBLIC_SEC_RESEARCH','1')
+    class Fake:
+        def activity(self,cik):
+            assert cik==123
+            return dict(sec_edgar.insider_summary([],since='2025-11-05'),truncated=False,fetched_at_epoch=1_790_000_000)
+    client=TestClient(public_demo.create_app(sec_fetch=lambda cik:LIVE_SUBMISSIONS,sec_insiders=Fake()),base_url='https://testserver')
+    body=client.get('/v1/sec/insiders?symbol=EXM').json()
+    assert body['symbol']=='EXM' and body['buys']['count']==0 and 'fetched_at_epoch' not in body
+    assert client.get('/v1/sec/insiders?symbol=ZZZ').status_code==404
+    assert TestClient(public_demo.create_app(),base_url='https://testserver').get('/v1/sec/insiders?symbol=EXM').status_code==503

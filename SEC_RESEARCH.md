@@ -55,3 +55,11 @@ Price tools that run on a CSV the visitor opens, such as a broker or spreadsheet
 - **Tools:** price chart with 20- and 50-day averages; total return, annual growth (only with a year or more), annualised volatility, worst drop and RSI(14); growth of $10,000 on the dates all files share; a hypothetical lump-sum or monthly investment; and alert rules (close or RSI above/below) checked against the latest row. Rules are saved in the browser by series name (`research-desk.price-lab.rules.v1`).
 - **Example data:** two clearly labelled fictional series, generated in the browser.
 - Calculations live in `static/assets/price-lab-core.js` and are tested in `tests/price-lab.test.cjs` (run in CI's Dashboard job).
+
+## Any US company and insider activity
+
+Both need live SEC access (`SEC_USER_AGENT`); without it the page says they are unavailable.
+
+- **Look up any ticker** (`/v1/sec/lookup?symbol=TSLA`, also `BRK.B`): resolves the ticker with the SEC's `company_tickers.json` (cached for a day), then builds fundamentals and filings from `companyfacts` and `submissions`. Results are cached for 12 hours (up to 60 companies), and at most 30 new lookups are fetched per 10 minutes. Starter companies are served from the snapshot.
+- **Insider activity** (`/v1/sec/insiders?symbol=`): reads up to 40 Form 4 filings from the past 12 months and summarises open-market purchases (code P) and sales (S), how many sales were under a Rule 10b5-1 plan, the most active insiders and the latest transactions. Grants, option exercises and tax withholding are counted separately as routine. Cached for 12 hours. Loaded only when the visitor presses **Load insider activity**, since the first load reads many filings.
+- All live requests share one client that waits 0.15 s between calls.

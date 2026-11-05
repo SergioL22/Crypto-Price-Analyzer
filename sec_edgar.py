@@ -160,3 +160,55 @@ def overlap(a:dict,b:dict,top:int=15)->dict:
     shared.sort(key=lambda r:-r['overlap'])
     return dict(weight_overlap=sum(r['overlap'] for r in shared),shared_count=len(shared),count_a=len(left),count_b=len(right),
                 a_weight_in_b=sum(r['weight_a'] for r in shared),b_weight_in_a=sum(r['weight_b'] for r in shared),top_shared=shared[:top])
+
+
+# Form 4 transaction codes (SEC Form 4 General Instructions, section 8).
+TRANSACTION_CODES={'P':'Open-market purchase','S':'Open-market sale','A':'Grant or award','M':'Option exercise','F':'Shares withheld for tax',
+                   'G':'Gift','D':'Returned to company','C':'Conversion','X':'Option exercise','J':'Other','I':'Discretionary','W':'Inheritance'}
+
+
+def parse_form4(xml_text:str)->dict:
+    root=ET.fromstring(xml_text)
+    def text(node,path):
+        found=node.find(path)
+        return found.text.strip() if found is not None and found.text and found.text.strip() else None
+    owners=[]
+    for owner in root.iterfind('reportingOwner'):
+        rel=owner.find('reportingOwnerRelationship');roles=[]
+        if rel is not None:
+            if text(rel,'isDirector') in ('1','true'):roles.append('Director')
+            if text(rel,'isOfficer') in ('1','true'):roles.append(text(rel,'officerTitle') or 'Officer')
+            if text(rel,'isTenPercentOwner') in ('1','true'):roles.append('10% owner')
+        owners.append(dict(name=text(owner,'reportingOwnerId/rptOwnerName') or 'Unnamed insider',roles=roles))
+    planned=text(root,'aff10b5One') in ('1','true')
+    rows=[]
+    for tx in root.iterfind('nonDerivativeTable/nonDerivativeTransaction'):
+        code=text(tx,'transactionCoding/transactionCode');shares=text(tx,'transactionAmounts/transactionShares/value')
+        if not code or shares is None:continue
+        price=text(tx,'transactionAmounts/transactionPricePerShare/value')
+        try:shares=float(shares);price=float(price) if price is not None else None
+        except ValueError:continue
+        rows.append(dict(date=text(tx,'transactionDate/value'),code=code,label=TRANSACTION_CODES.get(code,'Other'),
+                         shares=shares,price=price,value=shares*price if price else None,
+                         direction=text(tx,'transactionAmounts/transactionAcquiredDisposedCode/value'),planned=planned))
+    return dict(owners=owners,transactions=rows)
+
+
+def insider_summary(forms:list[dict],since:str)->dict:
+    """Aggregate parsed Form 4s. Open-market buys (P) and sales (S) are the signal; other codes are listed separately."""
+    buys=dict(count=0,shares=0.0,value=0.0);sales=dict(count=0,shares=0.0,value=0.0,planned=0);other=0;people={};recent=[]
+    for form in forms:
+        who=', '.join(o['name'] for o in form['owners']) or 'Unnamed insider'
+        roles=sorted({r for o in form['owners'] for r in o['roles']})
+        for tx in form['transactions']:
+            if not tx['date'] or tx['date']<since:continue
+            recent.append(dict(tx,insider=who,roles=roles,filed=form.get('filed'),url=form.get('url')))
+            if tx['code'] not in ('P','S'):other+=1;continue
+            bucket=buys if tx['code']=='P' else sales
+            bucket['count']+=1;bucket['shares']+=tx['shares'];bucket['value']+=tx['value'] or 0
+            if tx['code']=='S' and tx['planned']:sales['planned']+=1
+            person=people.setdefault(who,dict(insider=who,roles=roles,bought=0.0,sold=0.0))
+            person['bought' if tx['code']=='P' else 'sold']+=tx['value'] or 0
+    recent.sort(key=lambda r:(r['date'],r['filed'] or ''),reverse=True)
+    return dict(since=since,buys=buys,sales=sales,other_transactions=other,forms=len(forms),
+                insiders=sorted(people.values(),key=lambda p:-(p['bought']+p['sold']))[:10],recent=recent[:25])

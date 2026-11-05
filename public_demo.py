@@ -94,10 +94,13 @@ def origin_settings():
     return origin
 
 
-def create_app(sec_fetch=None):
+def create_app(sec_fetch=None,sec_lookup=None,sec_insiders=None):
     origin=origin_settings();authority=urlsplit(origin).netloc
-    # Fresh filing lists need an identifying SEC User-Agent; without one, filings come from the snapshot.
-    if sec_fetch is None and os.environ.get('SEC_USER_AGENT'):sec_fetch=sec_live.requests_fetch(os.environ['SEC_USER_AGENT'])
+    # Live SEC access needs an identifying User-Agent; without one, only the snapshot is served.
+    if os.environ.get('SEC_USER_AGENT') and None in (sec_fetch,sec_lookup,sec_insiders):
+        http=sec_live.SecHttp(os.environ['SEC_USER_AGENT'])
+        sec_fetch=sec_fetch or http.submissions;sec_lookup=sec_lookup or sec_live.CompanyLookup(http.json)
+        sec_insiders=sec_insiders or sec_live.InsiderActivity(http.json,http.text)
     live_filings=sec_live.LiveFilings(sec_fetch) if sec_fetch else None
     # This factory has no provider injection, live flag, key lookup or live fallback.
     stocks=StockService(provider=SyntheticProvider(),profiles=SyntheticProfiles(),history_request_limit=12)
@@ -133,7 +136,7 @@ def create_app(sec_fetch=None):
         if os.environ.get('PUBLIC_SEC_RESEARCH')=='1' and (request.url.path=='/filings-research.html' or request.url.path.startswith('/v1/sec/')):
             response.headers['X-Research-Data']='sec-public'
             if request.url.path.startswith('/v1/sec/') and response.status_code==200:
-                fresh=request.url.path in ('/v1/sec/company','/v1/sec/filings')
+                fresh=request.url.path in ('/v1/sec/company','/v1/sec/filings','/v1/sec/lookup')
                 response.headers['Cache-Control']='public, max-age=300' if fresh else 'public, max-age=3600'
         if os.environ.get('PUBLIC_SEC_RESEARCH')=='1' and request.url.path=='/price-lab.html':
             response.headers['X-Research-Data']='visitor-supplied'
@@ -202,6 +205,30 @@ def create_app(sec_fetch=None):
     def sec_company(symbol:str=Query(pattern=r'^[A-Z]{1,5}$')):
         data=sec_data();company=sec_symbol(data['companies'],symbol,'company')
         return dict(company,**company_filings(data,company),generated_at_utc=data['generated_at_utc'])
+
+    @app.get('/v1/sec/lookup')
+    def sec_lookup_company(symbol:str=Query(min_length=1,max_length=8,pattern=r'^[A-Za-z]{1,5}([.-][A-Za-z]{1,2})?$')):
+        data=sec_data();key=symbol.upper().replace('.','-')
+        if key in data['companies']:return sec_company(key)
+        if sec_lookup is None:raise SecUnavailable(503,'lookup_unavailable','Looking up other companies needs live SEC access, which is not configured here.')
+        try:record=sec_lookup.company(key)
+        except sec_live.LookupError_ as error:raise SecUnavailable(error.status,error.code,error.message)
+        fetched=datetime.fromtimestamp(record['fetched_at_epoch'],timezone.utc).replace(microsecond=0).isoformat()
+        return dict({k:v for k,v in record.items() if k!='fetched_at_epoch'},filings_source='live',filings_fetched_at_utc=fetched,generated_at_utc=fetched)
+
+    @app.get('/v1/sec/insiders')
+    def sec_insider_activity(symbol:str=Query(min_length=1,max_length=8,pattern=r'^[A-Za-z]{1,5}([.-][A-Za-z]{1,2})?$')):
+        data=sec_data();key=symbol.upper().replace('.','-')
+        if sec_insiders is None:raise SecUnavailable(503,'insiders_unavailable','Insider activity needs live SEC access, which is not configured here.')
+        company=data['companies'].get(key)
+        try:
+            if company is None:
+                if sec_lookup is None:raise SecUnavailable(404,'symbol_not_covered',f'{key} is not in the company list.')
+                company=sec_lookup.company(key)
+            summary=sec_insiders.activity(company['cik'])
+        except sec_live.LookupError_ as error:raise SecUnavailable(error.status,error.code,error.message)
+        fetched=datetime.fromtimestamp(summary['fetched_at_epoch'],timezone.utc).replace(microsecond=0).isoformat()
+        return dict({k:v for k,v in summary.items() if k!='fetched_at_epoch'},symbol=key,name=company['name'],fetched_at_utc=fetched)
 
     @app.get('/v1/sec/filings')
     def sec_filings(symbols:str=Query(pattern=r'^[A-Z]{1,5}(,[A-Z]{1,5}){0,19}$')):
