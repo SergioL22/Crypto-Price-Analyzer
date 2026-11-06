@@ -24,7 +24,7 @@ No key is needed. Open the local address, choose a fictional listing, save it to
 ## Deploy as a separate free service
 
 1. Publish this reviewed commit and confirm all seven CI jobs pass. The existing container job now builds and smoke-tests both private and public images. The public image must boot with no credentials, serve an anonymous banner and generated research, and reject private routes.
-2. In Render choose **New → Blueprint** and connect `SergioL22/Crypto-Price-Analyzer` on `main`.
+2. In Render choose **New → Blueprint** and connect `SergioL22/research-desk` on `main`.
 3. Name the new Blueprint **research-desk-demo**. Set **Blueprint Path** to **render-demo.yaml**, not render.yaml.
 4. Review that it creates exactly one NEW **research-desk-demo**, Docker, **Free** service, with Dockerfile.demo and no database, API-key fields or password prompts. Stop if the page proposes changing the private service or charging for a plan.
 5. Deploy the new Blueprint. Render supplies its external URL; the demo validates that exact HTTPS origin. A custom domain later requires explicitly setting PUBLIC_DEMO_ORIGIN without a trailing slash.
