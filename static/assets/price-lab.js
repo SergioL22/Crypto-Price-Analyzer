@@ -56,7 +56,7 @@
   lineChart(root,slice(s.rows.map(r=>r.date)),lines,num);
   const st=L.stats(s.rows);
   root.setAttribute('aria-label',`${s.name} price from ${s.rows[start].date} to ${st.end}, last ${num(st.last)}.`);
-  $('price-caption').textContent=`${s.name}${s.fictional?' (fictional)':''} · ${s.column} from your file · blue: price, amber: 20-day average, green dashed: 50-day average.`;
+  $('price-caption').textContent=`${s.name} · ${s.fictional?'generated fictional example':`${s.column} from your file`} · blue: price, amber: 20-day average, green dashed: 50-day average.`;
  }
  function renderStats(){
   const body=$('stats-table').tBodies[0];body.replaceChildren();
@@ -116,4 +116,5 @@
   (rules[s.name]=rules[s.name]||[]).push({type:$('rule-type').value,value});saveRules();$('rule-value').value='';$('rule-status').textContent=`Added a rule for ${s.name}.`;renderRules();};
  document.querySelectorAll('nav a').forEach(a=>{if(new URL(a.href).pathname===location.pathname)a.setAttribute('aria-current','page');});
  renderAll();
+ if(location.hash==='#example')$('load-example').click();  // shareable link that opens with the fictional sample
 })();

@@ -121,8 +121,9 @@ jobs:
             sleep 1
           done
           test "$ready" = 1
-          curl --silent --show-error --fail -H 'Host: demo.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10001/ -o demo-page.html
+          curl --silent --show-error --fail -H 'Host: demo.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10001/index.html -o demo-page.html
           grep -q 'SYNTHETIC DEMO' demo-page.html
+          curl --silent --show-error --fail -H 'Host: demo.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10001/ | grep -q 'Stock and ETF research from the source filings'
           curl --silent --show-error --fail -H 'Host: demo.example' -H 'X-Forwarded-Proto: https' 'http://127.0.0.1:10001/v1/stock-analysis?asset_id=demo:stock:XNYS:USD:SIMSUN&days=90' | python -c "import json,sys; d=json.load(sys.stdin); assert d['asset']['provider']=='demo' and d['history'] and 'SYNTHETIC DEMO' in d['limitations'][0]"
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: demo.example' -H 'X-Forwarded-Proto: https' http://127.0.0.1:10001/v1/holdings)" = 404
           curl --silent --show-error --fail -H 'Host: demo.example' -H 'X-Forwarded-Proto: https' 'http://127.0.0.1:10001/v1/sec/overlap?a=SPY&b=QQQ' | python -c "import json,sys; d=json.load(sys.stdin); assert 0 < d['weight_overlap'] < 1 and d['top_shared']"
