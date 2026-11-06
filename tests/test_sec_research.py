@@ -342,3 +342,18 @@ def test_insiders_endpoint(monkeypatch,tmp_path):
     assert body['symbol']=='EXM' and body['buys']['count']==0 and 'fetched_at_epoch' not in body
     assert client.get('/v1/sec/insiders?symbol=ZZZ').status_code==404
     assert TestClient(public_demo.create_app(),base_url='https://testserver').get('/v1/sec/insiders?symbol=EXM').status_code==503
+
+
+def test_home_page_replaces_practice_root_when_enabled(client,monkeypatch):
+    monkeypatch.setenv('PUBLIC_MARKET_WIDGETS','1')
+    monkeypatch.delenv('PUBLIC_SEC_RESEARCH',raising=False)
+    assert 'SYNTHETIC DEMO' in client.get('/').text
+    monkeypatch.setenv('PUBLIC_SEC_RESEARCH','1')
+    home=client.get('/')
+    assert home.status_code==200 and 'SYNTHETIC DEMO' not in home.text and home.headers['x-research-data']=='sec-public'
+    assert '/filings-research.html' in home.text and '/assets/home.js' in home.text
+    practice=client.get('/index.html').text
+    assert 'SYNTHETIC DEMO' in practice and 'data-practice-home="/index.html"' in practice
+    assert 'href="/"' not in practice.replace('<a href="/">← Research Desk home</a>','')
+    market=client.get('/market-charts.html').text
+    assert '<a href="/">Home</a>' in market and '<a href="/index.html">Practice mode</a>' in market and '/price-lab.html' in market

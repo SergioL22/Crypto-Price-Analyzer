@@ -138,6 +138,8 @@ def create_app(sec_fetch=None,sec_lookup=None,sec_insiders=None):
             if request.url.path.startswith('/v1/sec/') and response.status_code==200:
                 fresh=request.url.path in ('/v1/sec/company','/v1/sec/filings','/v1/sec/lookup')
                 response.headers['Cache-Control']='public, max-age=300' if fresh else 'public, max-age=3600'
+        if os.environ.get('PUBLIC_SEC_RESEARCH')=='1' and request.url.path=='/':
+            response.headers['X-Research-Data']='sec-public'
         if os.environ.get('PUBLIC_SEC_RESEARCH')=='1' and request.url.path=='/price-lab.html':
             response.headers['X-Research-Data']='visitor-supplied'
         if origin.startswith('https:'):response.headers['Strict-Transport-Security']='max-age=31536000'
@@ -253,12 +255,15 @@ def create_app(sec_fetch=None,sec_lookup=None,sec_insiders=None):
 
     @app.get('/{page:path}')
     def page(page:str):
+        if os.environ.get('PUBLIC_SEC_RESEARCH')=='1' and page=='':
+            return HTMLResponse((ROOT/'home.html').read_text(encoding='utf-8'))
         if os.environ.get('PUBLIC_SEC_RESEARCH')=='1' and page in ('filings-research.html','price-lab.html'):
             return HTMLResponse((ROOT/page).read_text(encoding='utf-8'))
         if os.environ.get('PUBLIC_MARKET_WIDGETS')=='1' and page in ('market-charts.html','market-watchlist.html'):
             content=(ROOT/'public-market.html').read_text(encoding='utf-8')
             if os.environ.get('PUBLIC_SEC_RESEARCH')=='1':
-                content=content.replace('<a href="/market-watchlist.html">Market watchlist</a>','<a href="/market-watchlist.html">Market watchlist</a><a href="/filings-research.html">Filings research</a><a href="/price-lab.html">Your price data</a>',1)
+                content=content.replace('<a href="/">Original chart · practice</a><a href="/market-charts.html">TradingView chart</a><a href="/market-watchlist.html">Market watchlist</a>',
+                    '<a href="/">Home</a><a href="/filings-research.html">Filings research</a><a href="/price-lab.html">Your price data</a><a href="/market-charts.html">TradingView chart</a><a href="/market-watchlist.html">Market watchlist</a><a href="/index.html">Practice mode</a>',1)
             return HTMLResponse(content)
         name=PAGES.get('/'+page)
         if not name:return JSONResponse(status_code=404,content={'error':{'code':'not_found','message':'Not part of the synthetic demo.'}})
@@ -266,6 +271,10 @@ def create_app(sec_fetch=None,sec_lookup=None,sec_insiders=None):
         if os.environ.get('PUBLIC_MARKET_WIDGETS')=='1':
             content=content.replace('<header>','<div class="chart-choice"><a class="chart-choice-link" href="/market-charts.html">Open TradingView chart · real market data</a><p>Original chart below: synthetic practice data. TradingView opens separately with real market charts.</p></div><header>',1)
         content=content.replace('<body ', '<body data-demo="true" ',1)
+        if os.environ.get('PUBLIC_SEC_RESEARCH')=='1':
+            # "/" is the Research Desk home page, so the practice workspace lives at /index.html.
+            content=content.replace('<body ','<body data-practice-home="/index.html" ',1).replace('href="/"','href="/index.html"').replace('href="/?view=','href="/index.html?view=')
+            content=content.replace('<header>','<p class="practice-home-link"><a href="/">← Research Desk home</a></p><header>',1)
         content=content.replace('<header>',f'<aside class="synthetic-demo-banner" role="note"><strong>{NOTICE}</strong><p>Try the interface with fictional data. Saved demo items stay in this browser and are separate from your private workspace.</p></aside><header>',1)
         content=content.replace('uses provider quota','uses demo request budget').replace('Research only · no trade execution · historical closing prices · split-adjusted · excludes dividends.','Synthetic demonstration only · generated prices · no trades or predictions.')
         content=content.replace('Research Desk</title>','Synthetic Demo</title>')

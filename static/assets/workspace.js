@@ -2,6 +2,7 @@
 (() => {
  if (!document.querySelectorAll) return;
  const query = new URLSearchParams(window.location.search);
+ const home = document.body.dataset.practiceHome || "/";
  const isCrypto = document.body.dataset.demo!=='true' && (window.location.pathname === "/crypto.html" || query.get("market") === "crypto");
  const market = isCrypto ? "crypto" : "stocks";
  const compare = !isCrypto && query.get("view") === "compare" && Boolean(document.getElementById("compare-workspace"));
@@ -9,13 +10,13 @@
  document.body.dataset.view = compare ? "compare" : "explore";
  for (const section of document.querySelectorAll("[data-workspace]")) section.hidden = section.dataset.workspace !== market;
  for (const link of document.querySelectorAll(".market-nav a")) {
-  const active = isCrypto ? link.getAttribute("href") === "/crypto.html" : link.getAttribute("href") === "/";
+  const active = isCrypto ? link.getAttribute("href") === "/crypto.html" : link.getAttribute("href") === home;
   if(active)link.setAttribute("aria-current","page");else link.removeAttribute("aria-current");
  }
  for (const link of document.querySelectorAll(".workspace-nav a")) {
   const href = link.getAttribute("href");
-  if(link.textContent === "Explore") link.setAttribute("href",isCrypto?"/crypto.html":"/");
-  else if(href !== "/?view=compare" && isCrypto) link.setAttribute("href",href+"?market=crypto");
+  if(link.textContent === "Explore") link.setAttribute("href",isCrypto?"/crypto.html":home);
+  else if(href !== home+"?view=compare" && isCrypto) link.setAttribute("href",href+"?market=crypto");
   if(compare && link.textContent === "Explore")link.removeAttribute("aria-current");
   if(compare && link.textContent === "Compare")link.setAttribute("aria-current","page");
  }

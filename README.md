@@ -1,4 +1,78 @@
-# Crypto Price Analyzer
+# Research Desk
+
+**Stock and ETF research built on public SEC filings.** Ten years of company fundamentals, insider-trading summaries, ETF holdings and overlap, and alerts for new filings, plus price tools that run in the browser on the visitor's own data.
+
+**Live demo:** https://research-desk-demo-tupe.onrender.com (free hosting, so the first load can take about 30 seconds)
+
+![Research Desk home page](docs/screenshots/home.png)
+
+## What it does
+
+- **Company fundamentals:** revenue, operating and net income, margins, operating and free cash flow, capex, diluted EPS and share count for up to ten fiscal years, for any SEC-registered US ticker. Every value links to the filing it came from.
+- **Insider trading:** a year of Form 4 filings summarised into open-market buys and sales, kept separate from routine grants and option exercises, with sales under pre-arranged Rule 10b5-1 plans flagged.
+- **ETF look-through:** top holdings, concentration and the effective number of holdings for SPY, QQQ, IWM, DIA and VTI, and the weight overlap between any two, from Form N-PORT.
+- **Filing alerts:** follow companies and see new 10-Ks, 10-Qs, 8-Ks, insider trades and ownership filings flagged since your last visit.
+- **Your price data:** open a CSV of daily prices for charts with moving averages, RSI, volatility, maximum drawdown, growth-of-$10,000 comparisons, a lump-sum or monthly investment simulator and alert rules. The file is parsed in the browser and never uploaded.
+- **Live charts** through TradingView's embed, and a labelled practice mode with fictional companies.
+
+| Filings research | Your price data |
+|---|---|
+| ![Fundamentals chart and filing alerts](docs/screenshots/filings.png) | ![Price tools with fictional example data](docs/screenshots/price-tools.png) |
+
+## The data problem this design solves
+
+The private version of this app ran on a free Twelve Data key. Before launching publicly I checked the terms of every free US price source: Twelve Data, Marketstack, Tiingo, EODHD, Alpha Vantage, Finnhub, FMP, Polygon/Massive, Alpaca, Yahoo and others. All of them license free data for personal or internal use only. Showing prices on a public site, sending them to browsers, or publishing results calculated from them needs a paid business license. Twelve Data confirmed this in writing.
+
+So the public app uses data that can be redistributed:
+
+- **SEC EDGAR** content is public information that may be copied and redistributed. Fundamentals, filings, insider trades and fund holdings all come from it.
+- **Prices are never served by Research Desk.** The price tools compute on a file the visitor supplies, entirely client-side, and live charts come from TradingView's own widget.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph EDGAR[SEC EDGAR]
+    XBRL[XBRL companyfacts]
+    SUB[Submissions feed]
+    NPORT[Form N-PORT]
+    F4[Form 4]
+  end
+  ACTION[Monthly GitHub Action<br/>sec_refresh.py] --> SNAP[(Committed snapshot<br/>sec_data/*.json)]
+  XBRL --> ACTION
+  NPORT --> ACTION
+  SNAP --> API[FastAPI public app<br/>public_demo.py]
+  SUB -->|30-min cache| API
+  XBRL -->|on-demand lookup, 12-h cache| API
+  F4 -->|12-h cache| API
+  API --> PAGES[Filings research and home pages]
+  CSV[Visitor's CSV] --> LAB[Price tools<br/>runs in the browser]
+```
+
+- **Snapshot plus live cache.** The starter companies and ETFs are served from a committed snapshot, so pages work even when EDGAR is unreachable. Fresh filing lists, ticker lookups and insider data are fetched by the server only, cached, and spaced at 0.15 s per request, which keeps traffic far under the SEC's 10-requests-per-second limit. Visitor traffic never reaches the SEC.
+- **Graceful fallback.** Without an `SEC_USER_AGENT`, or when EDGAR fails, the app falls back to the snapshot, backs off after failures, and says on the page which source and time it is showing.
+- **Data correctness.** Annual values use the SEC's de-duplicated calendar frames, with ordered concept fallbacks (for example, `Revenues` before `RevenueFromContractWithCustomer...`). N-PORT filings from multi-series trusts are matched by series ID. Securities-lending cash vehicles are excluded from holdings and overlap. A holding-company reorganisation (XOM) is merged with its predecessor registrant.
+- **Hardening.** Exact-origin and host checks, read-only methods, a global request budget, strict Content Security Policy per page, no secrets in the browser, and opt-in feature flags (`PUBLIC_SEC_RESEARCH`, `PUBLIC_MARKET_WIDGETS`) so the original synthetic demo stays unchanged when they are off.
+- **Testing.** About 600 offline Python tests (live HTTP is blocked in the test suite) and Node tests for the in-browser calculations, run on Ubuntu and Windows with Python 3.11 and 3.14. CI also builds and smoke-tests both Docker images.
+
+## Run it locally
+
+```bash
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt -r requirements-backend-dev.txt   # macOS/Linux: .venv/bin/python
+PUBLIC_DEMO_ORIGIN=http://127.0.0.1:8000 PUBLIC_SEC_RESEARCH=1 PUBLIC_MARKET_WIDGETS=1 \
+  .venv/Scripts/python -m uvicorn public_demo:create_app --factory --port 8000
+```
+
+Set `SEC_USER_AGENT="YourApp/1.0 (you@example.com)"` to enable live filings, ticker lookup and insider data. Run the tests with `python -m pytest tests` and `node --test tests/price-lab.test.cjs`. See [SEC_RESEARCH.md](SEC_RESEARCH.md) for data details and [APP_RELEASE_PLAN.md](APP_RELEASE_PLAN.md) for the hosting and licensing plan.
+
+## Project history
+
+Research Desk grew out of a command-line crypto analyzer. The private workspace added US stocks and ETFs, a backtested prediction model and an account system. The model never showed a reliable edge over simple benchmarks, so it stays research-only and is not part of the public app. The sections below document the original CLI and the private local app.
+
+---
+
+# Crypto Price Analyzer (original CLI)
 
 A command-line cryptocurrency price analysis tool that fetches CoinGecko data, computes technical indicators, and supports portfolio tracking and alerts. It is designed to run from the terminal with live market data, historical analysis, and portfolio monitoring features.
 
